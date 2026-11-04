@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "active": "default",
+  "entries": {
+    "default": {
+      "name": "亡途第一關V2.6.5"
+    },
+    "Canvas_2c79ed548e63429194ce162529ba92ca": {
+      "name": "亡途第三關V1.6.1_newest"
+    },
+    "Canvas_88e97997de90421fa51b14a6e9a657f2": {
+      "name": "亡途第四關V1.6.9"
+    },
+    "Canvas_641e5cc1189d4b19979097aeae75b319": {
+      "name": "亡途第二關V1.6.4"
+    },
+    "Canvas_d931bc96c5004aff9ef660852ef3192b": {
+      "name": "亡途第五關V1.8"
+    },
+    "Canvas_9ac946b9d0ff4008b4e429dfea321837": {
+      "name": "亡途迷宮活動V1.4.1"
+    },
+    "Canvas_5308107fb0c94db781d9ccfd82ae5f99": {
+      "name": "亡途牢獄活動V1.1.8"
+    },
+    "Canvas_b334b301300e4678915fbf89a1d78ef7": {
+      "name": "亡途常夜之國V1.2.1"
+    }
+  }
+}

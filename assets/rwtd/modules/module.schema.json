@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Android workflow module, backward compatible version 1 extensions",
+  "$comment": "Module Store enforces native ROI bounds, local TAG references, allowlisted features, priority completeness and action-specific rules in addition to this structural schema. No automatic migration.",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "id", "name", "steps"],
+  "properties": {
+    "schema_version": {"const": 1}, "id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 120},
+    "version": {"type": "integer", "minimum": 1}, "revision": {"type": "string"},
+    "dashboard_visible":{"type":"boolean","default":true,"description":"False hides internal modules from the main selector; Canvas can still reference them."},
+    "role": {"type": "string"}, "simulation_seconds": {"type": "number", "minimum": 0, "maximum": 3600},
+    "global_roi": {"$ref": "#/$defs/roi", "description": "Module-local shared COCO ROI for all steps without roi_tag. Inline step ROIs remain stored as fallback when this optional field is removed."},
+    "tags": {"type": "object", "maxProperties": 100, "propertyNames": {"pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$"}, "additionalProperties": {"type": "object", "additionalProperties": false, "required": ["name", "roi"], "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 120}, "roi": {"$ref": "#/$defs/roi"}}}},
+    "steps": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/step"}}
+  },
+  "$defs": {
+    "roi": {"type": "array", "minItems": 4, "maxItems": 4, "prefixItems": [{"type": "integer", "minimum": 0, "maximum": 1079}, {"type": "integer", "minimum": 0, "maximum": 2399}, {"type": "integer", "minimum": 1, "maximum": 1080}, {"type": "integer", "minimum": 1, "maximum": 2400}], "items": false},
+    "step": {
+      "type": "object", "additionalProperties": false, "required": ["step_id", "name"],
+      "not": {"required": ["roi_tag", "coco_roi"]},
+      "dependentRequired": {"mid_x": ["mid_y"], "mid_y": ["mid_x"]},
+      "allOf": [{"if": {"properties": {"name": {"enum": ["SwipeCalibration", "WaitTest"]}}, "required": ["name"]}, "then": {"properties": {"repeat_count": {"const": 1}}}}, {"if": {"anyOf": [{"required": ["mid_x"]}, {"required": ["mid_y"]}]}, "then": {"properties": {"name": {"const": "SwipeCalibration"}}}}],
+      "properties": {
+        "step_id": {"type": "string", "minLength": 1, "maxLength": 80},
+        "color_mode": {"enum": ["only", "coco", "either"]},
+        "color_rgb": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "integer", "minimum": 0, "maximum": 255}},
+        "color_tolerance": {"type": "integer", "minimum": 0, "maximum": 255, "default": 10},
+        "color_min_pixels": {"type": "integer", "minimum": 1, "maximum": 2592000, "default": 9},
+        "name": {"enum": ["TapTest", "LongPressTest", "SwipeCalibration", "CocoTargetTest", "WaitTest"]},
+        "feature": {"type": "string"}, "features": {"type": "array", "maxItems": 30, "uniqueItems": true, "items": {"type": "string"}},
+        "target_policy": {"enum": ["single", "unique_only", "first_top_to_bottom", "first_bottom_to_top", "all_top_to_bottom"]},
+        "feature_priority": {"type": "array", "maxItems": 30, "uniqueItems": true, "items": {"type": "string"}},
+        "roi_tag": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$"},
+        "coco_roi": {"$ref": "#/$defs/roi"}, "ocr_roi": {"$ref": "#/$defs/roi"},
+        "x": {"type": "integer", "minimum": 0, "maximum": 1079}, "y": {"type": "integer", "minimum": 0, "maximum": 2399},
+        "end_x": {"type": "integer", "minimum": 0, "maximum": 1079}, "end_y": {"type": "integer", "minimum": 0, "maximum": 2399},
+        "mid_x": {"type": "integer", "minimum": 0, "maximum": 1079}, "mid_y": {"type": "integer", "minimum": 0, "maximum": 2399},
+        "duration_ms": {"type": "integer", "minimum": 0, "maximum": 15000},
+        "repeat_count": {"type": "integer", "minimum": 1, "maximum": 100, "default": 1, "description": "Intentional tap/hold operations per explicit execution; separate from retry_policy. Swipe/wait require 1."},
+        "delay_seconds": {"type": "number", "minimum": 0, "maximum": 30}, "post_wait_seconds": {"type": "number", "minimum": 0, "maximum": 300},
+        "threshold": {"type": "number", "minimum": 0.5, "maximum": 1}, "recognize_before": {"type": "boolean"}, "allow_unconfirmed_target": {"type": "boolean"},
+        "verification_policy": {"enum": ["manual", "none", "coco_detected", "coco_disappeared", "ocr_increased", "ocr_decreased", "screen_transition"]},
+        "verify_feature": {"type": "string"}, "previous_feature": {"type": "string"}, "precondition_feature": {"type": "string"},
+        "timeout_seconds": {"type": "number", "minimum": 0, "maximum": 30}, "retry_policy": {"enum": ["never", "manual_only"]}, "reversible_ack": {"const": false}
+      }
+    }
+  }
+}

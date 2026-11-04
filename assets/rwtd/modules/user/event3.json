@@ -1,0 +1,122 @@
+{
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2400
+    ]
+  },
+  "schema_version": 1,
+  "id": "event3",
+  "name": "常夜之國刷取",
+  "version": 6,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 986,
+      "y": 2311,
+      "duration_ms": 50,
+      "repeat_count": 2
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 748,
+      "y": 2113,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "SwipeCalibration",
+      "step_id": "3",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 230,
+      "y": 1904,
+      "duration_ms": 1000,
+      "end_x": 234,
+      "end_y": 93
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "5",
+      "threshold": 0.85,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "x": 539,
+      "y": 1726
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "4",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 550,
+      "y": 1724,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "6",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 539,
+      "y": 2091,
+      "duration_ms": 50,
+      "repeat_count": 1
+    }
+  ],
+  "global_roi": [
+    315,
+    1630,
+    454,
+    186
+  ],
+  "revision": "e366c13e7bf978183baab67acf1a0a4b6a85bf32af0501163a28123c7fcb2c28"
+}

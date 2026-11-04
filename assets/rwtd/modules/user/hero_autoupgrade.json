@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "hero_autoupgrade",
+  "name": "英靈自動強化",
+  "version": 1,
+  "steps": [],
+  "revision": "d2813b31895dea4278cf7e25f1d322452a7c6868ba9c4f884c4f47c43fcfe5d5"
+}

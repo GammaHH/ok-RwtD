@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "death_reset",
+  "name": "重生重置",
+  "version": 2,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 430,
+      "y": 1321,
+      "duration_ms": 50,
+      "repeat_count": 1
+    }
+  ],
+  "revision": "23f99af6342a18d91ee6bb2502cabe57f9e4875b5c33b362712465e1c7c12446"
+}

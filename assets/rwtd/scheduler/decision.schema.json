@@ -1,0 +1,1034 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Simulation Canvas Decision Graph v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "entry",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "entry": {
+      "$ref": "#/$defs/id"
+    },
+    "revision": {
+      "type": "string"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "port",
+          "target"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "source": {
+            "$ref": "#/$defs/id"
+          },
+          "target": {
+            "$ref": "#/$defs/id"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NEXT",
+                  "YES",
+                  "NO",
+                  "TRIGGER"
+                ]
+              },
+              {
+                "pattern": "^CASE_[A-Za-z][A-Za-z0-9_-]{0,79}$",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "game_stage": {"type":"integer","minimum":1,"maximum":5},
+        "feature_rois": {
+          "type": "object",
+          "maxProperties": 200,
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "max_cycles": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "round_wait_seconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 300
+        },
+        "node_handoff_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "exit_condition": {
+          "$ref": "#/$defs/condition"
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "positions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              }
+            }
+          }
+        },
+        "viewport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "zoom"
+          ],
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": -100000,
+              "maximum": 100000
+            },
+            "y": {
+              "type": "number",
+              "minimum": -100000,
+              "maximum": 100000
+            },
+            "zoom": {
+              "type": "number",
+              "minimum": 0.2,
+              "maximum": 3
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$"
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "op",
+        "value"
+      ],
+      "properties": {
+        "field": {
+          "enum": [
+            "food_count",
+            "progress_km",
+            "retreatable_km",
+            "teleport_distance_km",
+            "exception",
+            "stage_complete",
+            "store_reward"
+          ]
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "gte",
+            "lte"
+          ]
+        },
+        "value": {
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "start",
+            "module",
+            "condition",
+            "guard",
+            "wait",
+            "manual",
+            "end",
+            "exclusion",
+            "ocr",
+            "notify",
+            "action",
+            "coco"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "task_type": {
+          "enum": [
+            "ModuleTask",
+            "TriggerTask"
+          ]
+        },
+        "preempt_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Nonzero Trigger may cancel the current node at a gesture boundary and take queue priority."
+        },
+        "entry_guard_retry": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "suppress_failure_notification": {
+          "type": "boolean",
+          "default": false,
+          "description": "Suppress this node's failure notification only; retain local evidence and execution behavior."
+        },
+        "unknown_no_retry": {
+          "type": "boolean",
+          "default": false,
+          "description": "Do not retry UNKNOWN recognition; use the node or attached Guard safe exit without guessing NO."
+        },
+        "trigger_interval": {
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "minimum": 0.5,
+              "maximum": 3600,
+              "type": "number"
+            }
+          ]
+        },
+        "step_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "repeat_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "entry_guard": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "mode", "at"],
+              "properties": {
+                "kind": {"const": "time"},
+                "mode": {"const": "daily"},
+                "at": {"type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"}
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "mode", "seconds"],
+              "properties": {
+                "kind": {"const": "time"},
+                "mode": {"const": "cooldown"},
+                "seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 31536000}
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "feature"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "coco"
+                },
+                "feature": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$"
+                },
+                "threshold": {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 1
+                },
+                "match": {
+                  "enum": [
+                    "detected",
+                    "disappeared"
+                  ]
+                },
+                "roi": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "variable",
+                "op",
+                "value"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "variable"
+                },
+                "variable": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "op": {
+                  "enum": [
+                    "eq",
+                    "contains"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operator",
+                "conditions"
+              ],
+              "properties": {
+                "operator": {
+                  "enum": [
+                    "and",
+                    "or"
+                  ]
+                },
+                "conditions": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 10,
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/node/properties/entry_guard"
+                      },
+                      {
+                        "not": {
+                          "required": [
+                            "conditions"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "execution_scope": {
+          "enum": [
+            "single",
+            "to_end"
+          ]
+        },
+        "feature_map": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "features"
+            ],
+            "properties": {
+              "value": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "features": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 30,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "threshold": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 1
+              },
+              "roi_source": {
+                "enum": [
+                  "shared",
+                  "module"
+                ]
+              },
+              "roi": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "module": {
+          "$ref": "#/$defs/id"
+        },
+        "field": {
+          "enum": [
+            "food_count",
+            "progress_km",
+            "retreatable_km",
+            "teleport_distance_km",
+            "exception",
+            "stage_complete",
+            "store_reward"
+          ]
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "gte",
+            "lte",
+            "contains"
+          ]
+        },
+        "value": {
+          "type": [
+            "boolean",
+            "number",
+            "string"
+          ],
+          "minimum": 0,
+          "maxLength": 100
+        },
+        "ocr_region": {
+          "enum": [
+            "fixed",
+            "coco"
+          ]
+        },
+        "ocr_feature": {
+          "$ref": "#/$defs/id"
+        },
+        "ocr_coco_threshold": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1
+        },
+        "output_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "ocr_mode": {"enum": ["dict", "raw"]},
+        "ocr_output_type": {"enum": ["text", "number", "english", "chinese", "time"]},
+        "ocr_trim": {"type": "boolean"},
+        "ocr_conversion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "output_type": {"enum": ["text", "number", "english", "chinese", "time"]},
+            "time_format": {"enum": ["auto", "ms", "hms", "hm", "units"]},
+            "trim": {"type": "boolean"},
+            "replacements": {"type": "object", "maxProperties": 30, "additionalProperties": {"type": "string", "maxLength": 80}},
+            "units": {"type": "object", "maxProperties": 30, "additionalProperties": {"type": "number", "exclusiveMinimum": 0}},
+            "scale": {"type": "number"},
+            "offset": {"type": "number"}
+          }
+        },
+        "variable": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "dictionary": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^\\S+$"
+          }
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "cooldown_seconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "seconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "feature": {
+          "$ref": "#/$defs/id"
+        },
+        "tag": {
+          "$ref": "#/$defs/id"
+        },
+        "roi": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "match": {
+          "enum": [
+            "detected",
+            "disappeared",
+            "contains",
+            "exact"
+          ]
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "handler": {
+          "enum": [
+            "pause",
+            "block",
+            "stop",
+            "manual",
+            "queue"
+          ]
+        },
+        "ocr_cases": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "dictionary"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$"
+              },
+              "dictionary": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 100,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "^\\S+$"
+                }
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "ocr_retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "interval_seconds": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 300
+            },
+            "max_attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "precondition": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "max_attempts": {
+                    "minimum": 2
+                  }
+                },
+                "required": [
+                  "max_attempts"
+                ]
+              },
+              "then": {
+                "required": [
+                  "precondition"
+                ]
+              }
+            }
+          ]
+        },
+        "chain": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "continue_condition": {
+              "required": [
+                "field",
+                "op",
+                "value"
+              ],
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "roi": {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "minItems": 4,
+                  "type": "array",
+                  "maxItems": 4
+                },
+                "value": {
+                  "type": [
+                    "number",
+                    "boolean"
+                  ]
+                },
+                "threshold": {
+                  "minimum": 0.5,
+                  "maximum": 1,
+                  "type": "number"
+                },
+                "field": {
+                  "enum": [
+                    "food_count",
+                    "progress_km",
+            "retreatable_km",
+                    "teleport_distance_km",
+                    "exception",
+                    "stage_complete",
+                    "store_reward"
+                  ]
+                },
+                "op": {
+                  "enum": [
+                    "gte",
+                    "lte",
+                    "eq"
+                  ]
+                }
+              }
+            },
+            "type": {
+              "enum": [
+                "ordinary",
+                "memory"
+              ]
+            },
+            "order": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "integer"
+            },
+            "memory_retries": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "integer"
+            },
+            "failure_limit": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "integer"
+            },
+            "next": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "run_limit": {
+              "minimum": 1,
+              "maximum": 1000,
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"required": ["unknown_no_retry"]},
+          "then": {
+            "anyOf": [
+              {"properties": {"kind": {"enum": ["coco", "ocr", "ocr_decision"]}}},
+              {"required": ["variable"], "properties": {"kind": {"const": "condition"}}},
+              {"required": ["entry_guard"]}
+            ]
+          }
+        },
+        {
+          "if": {"required": ["preempt_operations"]},
+          "then": {
+            "required": ["task_type"],
+            "properties": {"kind": {"const": "start"}, "task_type": {"const": "TriggerTask"}}
+          }
+        },
+        {
+          "if": {"required": ["preempt_operations"], "properties": {"preempt_operations": {"const": true}}},
+          "then": {"properties": {"trigger_interval": {"minimum": 0.5}}}
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "task_type"
+                ]
+              },
+              {
+                "required": [
+                  "trigger_interval"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "kind": {
+                "const": "start"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "coco"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "feature"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "module"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "module"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "wait"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "seconds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "condition"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "op",
+              "value"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "field"
+                ]
+              },
+              {
+                "required": [
+                  "variable"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "ocr"
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "dictionary"
+                ]
+              },
+              {
+                "required": [
+                  "ocr_cases"
+                ]
+              },
+              {
+                "required": ["ocr_mode"],
+                "properties": {"ocr_mode": {"const": "raw"}}
+              }
+            ],
+            "required": [
+              "output_key",
+              "roi"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "notify"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "message"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "action"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "module",
+              "step_id",
+              "variable",
+              "feature_map"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "guard"
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "feature"
+                ]
+              },
+              {
+                "required": [
+                  "field",
+                  "op",
+                  "value"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "tag"
+            ]
+          },
+          "then": {
+            "required": [
+              "module"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "ocr_retry"
+            ]
+          },
+          "then": {
+            "required": [
+              "ocr_cases"
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "ocr_retry"
+                ]
+              },
+              {
+                "required": [
+                  "ocr_cases"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "kind": {
+                "const": "ocr"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

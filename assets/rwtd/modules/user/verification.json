@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "verification",
+  "name": "驗證畫面",
+  "version": 8,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 200,
+      "y": 1457,
+      "duration_ms": 80,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 547,
+      "y": 1439,
+      "duration_ms": 50,
+      "repeat_count": 2
+    }
+  ],
+  "revision": "4f48d5682d41bf33d58dec6bc73411ba291fd28bb946297c1745ea6d2c48b144"
+}

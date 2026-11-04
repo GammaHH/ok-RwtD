@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "BuffUpgrade_Intelligence_user",
+  "name": "Buff Upgrade 智慧強化",
+  "version": 7,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "6",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "features": [
+        "buff_1",
+        "buff_2",
+        "buff_3"
+      ],
+      "target_policy": "all_top_to_bottom"
+    }
+  ],
+  "global_roi": [
+    651,
+    404,
+    429,
+    164
+  ],
+  "role": "BuffUpgrade",
+  "simulation_seconds": 1,
+  "revision": "692c7c1e99f508acd1d4148095054f43cbbe5769b689af4fd0ecef5133f94775"
+}

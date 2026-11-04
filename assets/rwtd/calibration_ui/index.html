@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RwtD 解析度校正</title><link rel="stylesheet" href="/dashboard.css"></head>
+<body><h1>解析度校正</h1>
+<p>校正獨立存檔，按「實機解析度＋模組 ID＋Step ID」套用。此介面不會送出點擊或滑動。請先停止並儲存其他任務。</p>
+<nav><button id="capture">更新實機畫面</button><button id="refresh">重載清單</button><button id="close">關閉任務</button><strong id="size"></strong></nav>
+<p id="message" role="status"></p>
+<label>模組 <select id="module"><option value="">請選擇模組</option></select></label>
+<p>有效＝可直接套用；已變更＝舊校正停用；新增＝尚未校正；已刪除＝保留舊紀錄供核對，不會挪給其他步驟。</p>
+<table><thead><tr><th>Step ID</th><th>操作</th><th>狀態</th><th>變更欄位</th><th></th></tr></thead><tbody id="steps"></tbody></table>
+<section id="editor" hidden>
+<p id="warning"></p><p id="reference-label"></p>
+<label>匯入此 Step 的參考圖（PNG／JPG，原生完整截圖，最多 6 MiB）<input id="upload" type="file" accept="image/png,image/jpeg"></label>
+<div class="pair"><article><h2>存檔預覽 → 本解析度（唯讀）</h2><canvas id="saved"></canvas><p>框線為原模組＋既有轉換，不含新校正。</p></article><article><h2>實機畫面（可調整）</h2><canvas id="live"></canvas><p>拖曳選取點／ROI；拖曳 ROI 右下角縮放。其他欄位以細線標示。</p></article></div>
+<label>座標／ROI 欄位 <select id="field"></select></label>
+<div id="values"></div><button id="reset">此欄恢復預設轉換</button>
+<p>辨識型點擊的位置在執行時由 OCR／COCO 決定；此處調整搜尋 ROI，不將辨識型動作改成固定點擊。三點滑動有校正觸點時，不再另外套用長度補償。</p>
+<details><summary>已過期的舊校正（僅供核對）</summary><pre id="stale"></pre></details>
+<button id="save">儲存此 Step 的獨立校正／確認已校正</button><button id="remove">移除此 Step 的本解析度校正</button><span id="dirty"></span>
+</section><script src="/dashboard.js"></script></body></html>

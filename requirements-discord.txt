@@ -1,0 +1,2 @@
+# Optional inbound control transport. Existing Webhook notifications do not need it.
+discord.py>=2.4,<3

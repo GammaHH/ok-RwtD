@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv*/
+configs/
+logs/
+screenshots/
+.env
+.env.*
+.codex*/
+assets/rwtd/runtime/
+assets/rwtd/manual_requests/
+assets/rwtd/presets/
+assets/rwtd/**/backups/
+assets/rwtd/scheduler/time_guards.json
+pyappify_dist/
+packaging_logs/

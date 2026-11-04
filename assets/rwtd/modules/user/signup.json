@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "id": "signup",
+  "name": "簽到",
+  "version": 28,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "4",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 517,
+      "y": 2101,
+      "duration_ms": 50,
+      "repeat_count": 5
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.7,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "x": 401,
+      "y": 1899,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "features": [
+        "signup"
+      ],
+      "target_policy": "all_top_to_bottom",
+      "color_mode": "either",
+      "color_rgb": [
+        255,
+        219,
+        50
+      ],
+      "color_tolerance": 10,
+      "color_min_pixels": 9
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "7",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 543,
+      "y": 2087,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "3",
+      "threshold": 0.85,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "target_policy": "all_top_to_bottom",
+      "roi_tag": "DEBUG",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "all",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "coco",
+            "features": [
+              "debug_OK",
+              "debug_leave"
+            ],
+            "threshold": 0.85
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "OK",
+            "match": "exact",
+            "threshold": 0.85,
+            "roi_tag": "DEBUG"
+          }
+        ]
+      },
+      "unknown_no_retry": true
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "5",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 535,
+      "y": 2097,
+      "duration_ms": 50,
+      "repeat_count": 4
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.6,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "features": [
+        "signup"
+      ],
+      "target_policy": "all_top_to_bottom",
+      "color_mode": "either",
+      "color_rgb": [
+        255,
+        219,
+        50
+      ],
+      "color_tolerance": 10,
+      "color_min_pixels": 9
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "8",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 543,
+      "y": 2080,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "6",
+      "threshold": 0.85,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "target_policy": "all_top_to_bottom",
+      "roi_tag": "DEBUG",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "all",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "coco",
+            "features": [
+              "debug_OK",
+              "debug_leave"
+            ],
+            "threshold": 0.85
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "OK",
+            "match": "exact",
+            "threshold": 0.85,
+            "roi_tag": "DEBUG"
+          }
+        ]
+      },
+      "unknown_no_retry": true
+    }
+  ],
+  "tags": {
+    "DEBUG": {
+      "name": "DEBUG",
+      "roi": [
+        0,
+        1019,
+        1080,
+        1381
+      ]
+    }
+  },
+  "global_roi": [
+    0,
+    1543,
+    1080,
+    530
+  ],
+  "revision": "82e4be7b58d1b95a6e8aaf72032506b933b97db7c28acea5ecc73c5d67e4c8ff"
+}

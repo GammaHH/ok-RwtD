@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "SIMPLE_REBORN",
+  "name": "單純重生",
+  "version": 5,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.7,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "x": 535,
+      "y": 2318
+    }
+  ],
+  "global_roi": [
+    0,
+    2181,
+    1080,
+    219
+  ],
+  "revision": "626c4452cfcf71d5ffc4a99dd4e21265558a8619ec2e182fdf720a2bbd00a997"
+}

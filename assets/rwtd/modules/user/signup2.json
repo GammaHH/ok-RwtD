@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "signup2",
+  "name": "愛莉簽到",
+  "version": 5,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 85,
+      "y": 1391,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 629,
+      "y": 1761,
+      "duration_ms": 50,
+      "repeat_count": 5
+    }
+  ],
+  "revision": "e70bc646dee653df59d99fec8be2c231d8be56de8944afbb916c2c3e258eb94a"
+}

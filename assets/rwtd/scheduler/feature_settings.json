@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "features": {
+    "store": {
+      "roi": [
+        755,
+        2218,
+        170,
+        165
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "reward": {
+      "roi": [
+        861,
+        2222,
+        62,
+        65
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "chest": {
+      "roi": [
+        960,
+        720,
+        110,
+        165
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "daily_collect": {
+      "roi": [
+        550,
+        1648,
+        530,
+        161
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "buy_max": {
+      "roi": [
+        803,
+        1445,
+        169,
+        100
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "daily": {
+      "roi": [
+        18,
+        1326,
+        133,
+        133
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "debug_leave": {
+      "roi": [
+        10,
+        1732,
+        1070,
+        668
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "signup": {
+      "roi": [
+        9,
+        1588,
+        1071,
+        489
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "buff_1": {
+      "roi": [
+        638,
+        396,
+        180,
+        193
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "buy1": {
+      "roi": [
+        554,
+        1519,
+        526,
+        710
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "buy2": {
+      "roi": [
+        543,
+        1522,
+        537,
+        703
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "buy3": {
+      "roi": [
+        584,
+        1520,
+        496,
+        703
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "buff_2": {
+      "roi": [
+        790,
+        415,
+        158,
+        164
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "buff_3": {
+      "roi": [
+        931,
+        409,
+        149,
+        169
+      ],
+      "grayscale": false,
+      "scale": 1
+    },
+    "expedition_time": {
+      "roi": [
+        0,
+        1141,
+        194,
+        70
+      ],
+      "grayscale": false,
+      "scale": 1,
+      "warp_template": true
+    }
+  }
+}

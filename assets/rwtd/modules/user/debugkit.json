@@ -1,0 +1,181 @@
+{
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ]
+  },
+  "schema_version": 1,
+  "id": "debugkit",
+  "name": "偵錯",
+  "version": 29,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.8,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "unknown_no_retry": true,
+      "target_policy": "all_top_to_bottom",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "all",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "ocr",
+            "threshold": 0.8,
+            "text": "OK",
+            "match": "exact"
+          },
+          {
+            "type": "coco",
+            "join": "OR",
+            "threshold": 0.7,
+            "features": [
+              "debug_OK",
+              "debug_cancel",
+              "debug_close",
+              "debug_leave",
+              "get_reward",
+              "debug_leave2"
+            ]
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "取消",
+            "match": "contains",
+            "threshold": 0.8
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "捨棄",
+            "match": "exact",
+            "threshold": 0.8
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "返回",
+            "match": "contains",
+            "threshold": 0.8
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "領取",
+            "match": "contains",
+            "threshold": 0.8
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "下一步",
+            "match": "contains",
+            "threshold": 0.8
+          }
+        ]
+      }
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.7,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "unknown_no_retry": true,
+      "target_policy": "all_top_to_bottom",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "all",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "coco",
+            "threshold": 0.7,
+            "features": [
+              "debug_close",
+              "debug_OK",
+              "debug_cancel",
+              "debug_leave",
+              "get_reward",
+              "debug_leave2"
+            ]
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "OK",
+            "match": "exact",
+            "threshold": 0.7
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "取消",
+            "match": "contains",
+            "threshold": 0.7
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "捨棄",
+            "match": "exact",
+            "threshold": 0.7
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "OK",
+            "match": "exact",
+            "threshold": 0.7
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "返回",
+            "match": "contains",
+            "threshold": 0.7
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "領取",
+            "match": "contains",
+            "threshold": 0.7
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "下一步",
+            "match": "contains",
+            "threshold": 0.7
+          }
+        ]
+      }
+    }
+  ],
+  "global_roi": [
+    0,
+    868,
+    1080,
+    1532
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "OFFLINE_REWARD",
+  "name": "掛機獎勵排除",
+  "version": 3,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 640,
+      "y": 1390,
+      "duration_ms": 50,
+      "repeat_count": 2
+    }
+  ],
+  "revision": "a3e08e9119429d572d8d3568e36f00d94d7b6feac9a19c00711af46f7beb5851"
+}

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "macro": "亡途轉生",
+  "source": "docs/rwtd/analysis/click_assistant_decoded_20261008_193932_782/backup_01.decoded.json",
+  "coco_source": "ok_templates/coco_annotations.json",
+  "status": "OFFLINE_SEMANTIC_BINDINGS_ONLY",
+  "execution_enabled": false,
+  "scope_policy": {
+    "source": "Latest user instruction: do not implement behavior not mentioned in the described workflow",
+    "implement_only_user_described_behavior": true,
+    "unmentioned_features": "DEFER_IMPLEMENTATION",
+    "unresolved_individual_steps": "PRESERVE_EVIDENCE_WITHOUT_EXECUTION",
+    "invent_additional_recovery_actions": false,
+    "automatically_skip_unknown_steps_during_execution": false,
+    "other_macro_additions": "Require individual semantic mapping before implementation; retain original actions",
+    "recording_behavior_does_not_authorize_execution": true
+  },
+  "coordinate_policy": {
+    "strategy": "detect_named_feature_on_current_frame",
+    "use_macro_coordinates": false,
+    "apply_fixed_115px_offset": false,
+    "legacy_offset_evidence": "User reports Click Assistant saves bottom gestures shifted upward by over 100 px",
+    "adb_frame_origin_verified": false
+  },
+  "bindings": [
+    {"steps": [1], "feature": "reborn", "role": "rebirth", "irreversible_confirmation_authorized": false},
+    {"steps": [5, 71], "feature": "quest", "role": "open_quest_panel"},
+    {"steps": [11, 18, 31, 53, 66, 76, 94], "feature": "buff", "role": "open_buff_panel"},
+    {"steps": [12, 54, 67, 77], "feature": "locate", "role": "set_portal", "feature_semantics": "USER_DESCRIPTION_PENDING_SCREEN_CROSSCHECK"},
+    {"steps": [13, 37, 78], "feature": "army", "role": "open_army_panel"},
+    {"steps": [17, 98], "feature": "debug_leave", "role": "leave_intermediate_screen", "requires_matching_screen": true},
+    {"steps": [62], "feature": "debug_leave", "role": "leave_intermediate_screen", "confidence": "USER_UNCERTAIN", "blocked": true},
+    {"steps": [26], "feature": "store", "role": "open_store_reward", "requires_feature_at_tab": "reward"},
+    {"steps": [61], "feature": "food_chest", "role": "open_food_chest"},
+    {"steps": [63], "feature": "food", "role": "open_food_panel"},
+    {"steps": [96, 99], "feature": "backtolobby", "role": "open_return_to_lobby_flow"},
+    {"steps": [100], "feature": "backtolobby_comfirm", "role": "confirm_return_to_lobby", "irreversible_confirmation_authorized": false},
+    {"steps": [102, 104], "feature": "get_reward", "role": "collect_results_reward", "preserve_raw_cycles": true}
+  ],
+  "chest_sequences": [
+    {"steps": [2, 3, 4], "recovery_steps": [], "normal_actions": 3},
+    {"steps": [34, 35, 36], "recovery_steps": [], "normal_actions": 3},
+    {"steps": [68, 69, 70], "recovery_steps": [], "normal_actions": 3},
+    {"steps": [91, 92, 93], "recovery_steps": [], "normal_actions": 3, "ground_chest_step": 92}
+  ],
+  "chest_policy": {
+    "features": ["chest", "reward_get"],
+    "middle_action_is_normal_flow": true,
+    "middle_action_feature_binding": "PENDING_SCREEN_EVIDENCE",
+    "preserve_terminal_double_tap": true,
+    "failure_handling": "Stop input and preserve screen evidence on unexpected state; no invented middle recovery",
+    "claim_condition": "Use observed screen readiness and progress where relevant"
+  },
+  "upgrade_groups": [
+    {"steps": [7, 8, 9, 10], "panel": "quest", "feature_candidates": ["buy1", "buy2"], "ordered_items": "first_four_quests", "hold_duration_ms": 5000, "item_identity_required": true},
+    {"step_range": [38, 52], "panel": "army", "feature_candidates": ["buy1", "buy2"], "each_action_role": "PENDING_INCLUDES_SCROLL_AND_POSSIBLE_RECOVERY"},
+    {"step_range": [55, 60], "panel": "quest", "feature_candidates": ["buy1", "buy2"], "each_action_role": "PENDING"},
+    {"steps": [64, 65], "panel": "food", "role": "increase_soldier_attack", "feature_binding": "PENDING"},
+    {"steps": [72, 73, 74, 75], "panel": "quest", "feature_candidates": ["buy1", "buy2"], "item_identity_required": true},
+    {"step_range": [79, 90], "panel": "army", "feature_candidates": ["buy1", "buy2"], "each_action_role": "PENDING_INCLUDES_SCROLL_AND_POSSIBLE_RECOVERY"}
+  ],
+  "upgrade_policy": {
+    "partly_visible_buttons": "Require correct item row and visible clickable area",
+    "substitute_buy_max": false,
+    "substitute_nearest_button": false,
+    "preserve_hold_and_cycle_semantics": true
+  },
+  "unmapped_death_recovery": {
+    "step": 97,
+    "role": "cancel_character_death_prompt",
+    "coco_feature": null,
+    "blocked": true,
+    "reason": "User confirms death-prompt COCO annotation has not been created; await actual image"
+  },
+  "loading_wait": {
+    "step": 105,
+    "role": "wait_for_black_screen_loading",
+    "legacy_gesture": "Preserved in original macro; point has no intended game function per user",
+    "future_ready_condition": "PENDING_STABLE_EXPECTED_SCREEN",
+    "blind_click_enabled": false
+  },
+  "timing_policy": {
+    "fixed_intervals": "Retain as evidence; migrate waits to validated progress and screen readiness",
+    "raw_duration_delay_cycle_flags": "Original JSON remains authoritative until complete DEX field trace",
+    "timeout_behavior": "Inhibit input, save evidence, notify once per incident"
+  },
+  "validation": {
+    "user_gameplay_explanation": true,
+    "runtime_field_trace_complete": false,
+    "screen_transitions_verified": false,
+    "official_adb_backend_input_enabled": false
+  }
+}

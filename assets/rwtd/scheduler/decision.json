@@ -1,0 +1,1562 @@
+{
+  "schema_version": 2,
+  "entry": "Start",
+  "nodes": [
+    {
+      "id": "Start",
+      "kind": "start",
+      "name": "開始",
+      "task_type": "ModuleTask",
+      "chain": {
+        "order": 1,
+        "type": "memory",
+        "failure_limit": 3,
+        "run_limit": 1,
+        "memory_retries": 3
+      }
+    },
+    {
+      "id": "RememberBuyMax",
+      "kind": "exclusion",
+      "name": "記住禁止點擊區域",
+      "repeat_runs": 1,
+      "feature": "buy_max",
+      "threshold": 0.8
+    },
+    {
+      "id": "End",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node11",
+      "kind": "start",
+      "name": "首次啟動",
+      "task_type": "ModuleTask",
+      "chain": {
+        "order": 2,
+        "type": "ordinary",
+        "failure_limit": 3,
+        "run_limit": 1,
+        "memory_retries": 3
+      }
+    },
+    {
+      "id": "Node12",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node14",
+      "kind": "module",
+      "name": "首次召喚",
+      "module": "ArmySummon"
+    },
+    {
+      "id": "Node15",
+      "kind": "start",
+      "name": "定期寶箱檢查",
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "coco",
+            "feature": "chest",
+            "threshold": 0.75,
+            "match": "detected"
+          },
+          {
+            "kind": "time",
+            "mode": "cooldown",
+            "seconds": 100
+          }
+        ]
+      },
+      "task_type": "TriggerTask",
+      "trigger_interval": 5,
+      "enabled": true
+    },
+    {
+      "id": "Node16",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node17",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "ChestCollection"
+    },
+    {
+      "id": "Node20",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "BuffUpgrade"
+    },
+    {
+      "id": "Node23",
+      "kind": "start",
+      "name": "廣告",
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "time",
+            "mode": "cooldown",
+            "seconds": 1700
+          },
+          {
+            "kind": "coco",
+            "feature": "reward",
+            "threshold": 0.9,
+            "match": "detected"
+          }
+        ]
+      },
+      "task_type": "TriggerTask",
+      "trigger_interval": 60,
+      "enabled": true
+    },
+    {
+      "id": "Node24",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node25",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "StoreReward"
+    },
+    {
+      "id": "Node26",
+      "kind": "start",
+      "name": "常規進行",
+      "task_type": "ModuleTask",
+      "chain": {
+        "order": 3,
+        "type": "ordinary",
+        "failure_limit": 3,
+        "run_limit": 1,
+        "memory_retries": 3
+      }
+    },
+    {
+      "id": "Node27",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node28",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "ArmyUpgrade"
+    },
+    {
+      "id": "Node34",
+      "kind": "condition",
+      "name": "條件",
+      "variable": "OCR3",
+      "op": "gte",
+      "value": 50
+    },
+    {
+      "id": "Node36",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "FoodUpgrade"
+    },
+    {
+      "id": "Node40",
+      "kind": "ocr",
+      "name": "food OCR 讀取",
+      "output_key": "OCR3",
+      "roi": [
+        95,
+        430,
+        82,
+        68
+      ],
+      "threshold": 0.7,
+      "ocr_mode": "raw",
+      "ocr_conversion": {},
+      "ocr_output_type": "number",
+      "ocr_trim": true,
+      "ocr_region": "fixed"
+    },
+    {
+      "id": "Node37",
+      "kind": "start",
+      "name": "收尾",
+      "task_type": "ModuleTask",
+      "chain": {
+        "order": 4,
+        "type": "ordinary",
+        "failure_limit": 3,
+        "run_limit": 1,
+        "memory_retries": 3
+      }
+    },
+    {
+      "id": "Node38",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node39",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "Settlement"
+    },
+    {
+      "id": "Node44",
+      "kind": "module",
+      "name": "執行模組",
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "coco",
+            "feature": "reborn",
+            "threshold": 0.8,
+            "match": "detected"
+          }
+        ]
+      },
+      "module": "SIMPLE_REBORN"
+    },
+    {
+      "id": "Node45",
+      "kind": "notify",
+      "name": "結束通知",
+      "message": "一輪結束了",
+      "cooldown_seconds": 120
+    },
+    {
+      "id": "Node46",
+      "kind": "notify",
+      "name": "輪數開始",
+      "message": "新的一輪開始了",
+      "cooldown_seconds": 120
+    },
+    {
+      "id": "Node47",
+      "kind": "start",
+      "name": "測試入口",
+      "task_type": "ModuleTask"
+    },
+    {
+      "id": "Node48",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node18",
+      "kind": "coco",
+      "name": "COCO 檢查",
+      "feature": "buy_max",
+      "match": "detected",
+      "threshold": 0.8
+    },
+    {
+      "id": "Node30",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "Settlement_user"
+    },
+    {
+      "id": "Node31",
+      "kind": "start",
+      "name": "排除禁斷",
+      "task_type": "TriggerTask",
+      "trigger_interval": 0,
+      "enabled": true
+    },
+    {
+      "id": "Node32",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "Settlement_user"
+    },
+    {
+      "id": "Node41",
+      "kind": "notify",
+      "name": "通知",
+      "message": "成功?",
+      "cooldown_seconds": 1
+    },
+    {
+      "id": "Node43",
+      "kind": "condition",
+      "name": "條件",
+      "field": "progress_km",
+      "op": "eq",
+      "value": 900
+    },
+    {
+      "id": "Node13",
+      "kind": "start",
+      "name": "開始",
+      "suppress_failure_notification": true,
+      "unknown_no_retry": true,
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "ocr",
+            "text": "900",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              325,
+              366,
+              104,
+              64
+            ]
+          }
+        ]
+      },
+      "task_type": "TriggerTask",
+      "trigger_interval": 3,
+      "enabled": true,
+      "preempt_operations": true
+    },
+    {
+      "id": "Node29",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "QuestUpgrade"
+    },
+    {
+      "id": "Node50",
+      "kind": "module",
+      "name": "執行模組",
+      "repeat_runs": 2,
+      "module": "hero_death"
+    },
+    {
+      "id": "Node52",
+      "kind": "notify",
+      "name": "通知",
+      "message": "英雄已處理",
+      "cooldown_seconds": 120
+    },
+    {
+      "id": "Node53",
+      "kind": "coco",
+      "name": "COCO 檢查",
+      "feature": "herodeath",
+      "match": "detected",
+      "threshold": 0.8
+    },
+    {
+      "id": "Node54",
+      "kind": "wait",
+      "name": "等待",
+      "seconds": 1
+    },
+    {
+      "id": "Node35",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "QuestUpgrade_user"
+    },
+    {
+      "id": "Node8",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "ArmyUpgrade"
+    },
+    {
+      "id": "Node9",
+      "kind": "start",
+      "name": "開始",
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "coco",
+            "feature": "death_note",
+            "threshold": 0.8,
+            "match": "detected"
+          }
+        ]
+      },
+      "task_type": "TriggerTask",
+      "trigger_interval": 0,
+      "enabled": true
+    },
+    {
+      "id": "Node10",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "death_reset"
+    },
+    {
+      "id": "Node58",
+      "kind": "module",
+      "name": "執行模組",
+      "suppress_failure_notification": true,
+      "module": "debugkit"
+    },
+    {
+      "id": "Node2",
+      "kind": "module",
+      "name": "執行模組",
+      "repeat_runs": 2,
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "coco",
+            "feature": "herodeath",
+            "threshold": 0.8,
+            "match": "detected"
+          }
+        ]
+      },
+      "entry_guard_retry": 2,
+      "module": "hero_death"
+    },
+    {
+      "id": "Node19",
+      "kind": "module",
+      "name": "執行模組",
+      "suppress_failure_notification": true,
+      "unknown_no_retry": true,
+      "entry_guard": {
+        "operator": "or",
+        "conditions": [
+          {
+            "kind": "ocr",
+            "text": "點擊",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              0,
+              417,
+              1080,
+              1423
+            ]
+          },
+          {
+            "kind": "coco",
+            "feature": "expedition_done",
+            "threshold": 0.8,
+            "match": "detected"
+          }
+        ]
+      },
+      "module": "expedition"
+    },
+    {
+      "id": "Node21",
+      "kind": "coco",
+      "name": "COCO 檢查",
+      "repeat_runs": 2,
+      "feature": "herodeath",
+      "match": "detected",
+      "threshold": 0.8
+    },
+    {
+      "id": "Node33",
+      "kind": "notify",
+      "name": "通知",
+      "message": "自動遠征英雄報告已處理",
+      "cooldown_seconds": 120
+    },
+    {
+      "id": "Node56",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "expedition_again"
+    },
+    {
+      "id": "Node57",
+      "kind": "coco",
+      "name": "COCO 檢查",
+      "unknown_no_retry": true,
+      "entry_guard": {
+        "operator": "or",
+        "conditions": [
+          {
+            "kind": "time",
+            "mode": "ocr_cooldown",
+            "variable": "ExpeditionTime"
+          },
+          {
+            "kind": "coco",
+            "feature": "expedition_done",
+            "threshold": 0.8,
+            "match": "detected",
+            "roi": [
+              0,
+              1066,
+              162,
+              150
+            ]
+          }
+        ]
+      },
+      "feature": "expedition_done",
+      "match": "detected",
+      "threshold": 0.8,
+      "roi": [
+        0,
+        1066,
+        162,
+        150
+      ]
+    },
+    {
+      "id": "Node63",
+      "kind": "ocr_decision",
+      "name": "純 OCR 決策",
+      "unknown_no_retry": true,
+      "roi": [
+        12,
+        223,
+        1058,
+        1920
+      ],
+      "threshold": 0.8,
+      "ocr_output_type": "text",
+      "op": "contains",
+      "value": "遠征"
+    },
+    {
+      "id": "Node64",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "debugkit"
+    },
+    {
+      "id": "Node1",
+      "kind": "start",
+      "name": "開始",
+      "suppress_failure_notification": true,
+      "task_type": "TriggerTask",
+      "trigger_interval": 30,
+      "enabled": true,
+      "preempt_operations": true
+    },
+    {
+      "id": "Node3",
+      "kind": "coco",
+      "name": "COCO 檢查",
+      "suppress_failure_notification": true,
+      "feature": "captcha_dialog",
+      "match": "detected",
+      "threshold": 0.8
+    },
+    {
+      "id": "Node4",
+      "kind": "notify",
+      "name": "通知",
+      "message": "辨識結果：{value} 已成功操作",
+      "cooldown_seconds": 1,
+      "variable": "OCR1"
+    },
+    {
+      "id": "Node5",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node6",
+      "kind": "ocr",
+      "name": "OCR 讀取 DICT",
+      "suppress_failure_notification": true,
+      "repeat_runs": 3,
+      "output_key": "OCR1",
+      "dictionary": [
+        "坦克",
+        "農民",
+        "小兵",
+        "遊俠",
+        "術師",
+        "地精"
+      ],
+      "roi": [
+        0,
+        0,
+        1080,
+        2400
+      ],
+      "match": "contains",
+      "threshold": 0.8,
+      "ocr_mode": "dict",
+      "ocr_region": "coco",
+      "ocr_feature": "instruction_text",
+      "ocr_coco_threshold": 0.8
+    },
+    {
+      "id": "Node7",
+      "kind": "action",
+      "name": "操作步驟",
+      "suppress_failure_notification": true,
+      "module": "verification",
+      "step_id": "1",
+      "variable": "OCR1",
+      "feature_map": [
+        {
+          "value": "坦克",
+          "features": [
+            "char_Tank"
+          ]
+        },
+        {
+          "value": "小兵",
+          "features": [
+            "char_Swordsmen"
+          ]
+        },
+        {
+          "value": "遊俠",
+          "features": [
+            "char_Ranger"
+          ]
+        },
+        {
+          "value": "術師",
+          "features": [
+            "char_Sorcerer"
+          ]
+        },
+        {
+          "value": "地精",
+          "features": [
+            "char_Pygmy"
+          ]
+        }
+      ],
+      "execution_scope": "to_end",
+      "input_source": "variable",
+      "threshold": 0.6
+    },
+    {
+      "id": "Node65",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "expedition_cancel"
+    },
+    {
+      "id": "Node22",
+      "kind": "module",
+      "name": "執行模組",
+      "repeat_runs": 3,
+      "module": "signup"
+    },
+    {
+      "id": "Node42",
+      "kind": "start",
+      "name": "開始",
+      "suppress_failure_notification": true,
+      "unknown_no_retry": true,
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "time",
+            "mode": "daily",
+            "at": "00:00"
+          },
+          {
+            "kind": "coco",
+            "feature": "reborn",
+            "threshold": 0.8,
+            "match": "disappeared",
+            "roi": [
+              0,
+              2194,
+              1080,
+              206
+            ]
+          },
+          {
+            "kind": "coco",
+            "feature": "buy_max",
+            "threshold": 0.8,
+            "match": "disappeared"
+          },
+          {
+            "kind": "ocr",
+            "text": "登入",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              0,
+              185,
+              1080,
+              1964
+            ]
+          }
+        ]
+      },
+      "task_type": "TriggerTask",
+      "trigger_interval": 3,
+      "enabled": true,
+      "preempt_operations": true
+    },
+    {
+      "id": "Node49",
+      "kind": "coco",
+      "name": "COCO 檢查",
+      "suppress_failure_notification": true,
+      "unknown_no_retry": true,
+      "feature": "buy_max",
+      "match": "detected",
+      "threshold": 0.8
+    },
+    {
+      "id": "Node51",
+      "kind": "module",
+      "name": "執行模組",
+      "repeat_runs": 3,
+      "entry_guard": {
+        "operator": "and",
+        "conditions": [
+          {
+            "kind": "coco",
+            "feature": "signup",
+            "threshold": 0.8,
+            "match": "disappeared"
+          }
+        ]
+      },
+      "module": "signup_debug"
+    },
+    {
+      "id": "Node55",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "debugkit"
+    },
+    {
+      "id": "Node59",
+      "kind": "start",
+      "name": "開始",
+      "suppress_failure_notification": true,
+      "unknown_no_retry": true,
+      "repeat_runs": 2,
+      "entry_guard": {
+        "operator": "or",
+        "conditions": [
+          {
+            "kind": "ocr",
+            "text": "放棄",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              0,
+              0,
+              1080,
+              2400
+            ]
+          },
+          {
+            "kind": "ocr",
+            "text": "取消",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              0,
+              0,
+              1080,
+              2400
+            ]
+          },
+          {
+            "kind": "coco",
+            "feature": "debug_cancel",
+            "threshold": 0.8,
+            "match": "detected"
+          },
+          {
+            "kind": "coco",
+            "feature": "debug_close",
+            "threshold": 0.8,
+            "match": "detected"
+          },
+          {
+            "kind": "coco",
+            "feature": "debug_leave",
+            "threshold": 0.8,
+            "match": "detected"
+          },
+          {
+            "kind": "ocr",
+            "text": "關閉",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              0,
+              0,
+              1080,
+              2400
+            ]
+          },
+          {
+            "kind": "ocr",
+            "text": "OK",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              0,
+              0,
+              1080,
+              2400
+            ]
+          },
+          {
+            "kind": "coco",
+            "feature": "debug_OK",
+            "threshold": 0.8,
+            "match": "detected",
+            "roi": [
+              0,
+              802,
+              1080,
+              1441
+            ]
+          },
+          {
+            "kind": "ocr",
+            "text": "編隊完成",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              0,
+              0,
+              420,
+              273
+            ]
+          }
+        ]
+      },
+      "entry_guard_retry": 2,
+      "task_type": "TriggerTask",
+      "trigger_interval": 0,
+      "enabled": true,
+      "preempt_operations": false
+    },
+    {
+      "id": "Node60",
+      "kind": "end",
+      "name": "結束"
+    },
+    {
+      "id": "Node61",
+      "kind": "module",
+      "name": "執行模組",
+      "module": "debugkit"
+    }
+  ],
+  "edges": [
+    {
+      "id": "E15",
+      "source": "Node17",
+      "port": "NEXT",
+      "target": "Node16"
+    },
+    {
+      "id": "E18",
+      "source": "Node20",
+      "port": "NEXT",
+      "target": "Node12"
+    },
+    {
+      "id": "E22",
+      "source": "Node23",
+      "port": "NEXT",
+      "target": "Node25"
+    },
+    {
+      "id": "E23",
+      "source": "Node25",
+      "port": "NEXT",
+      "target": "Node24"
+    },
+    {
+      "id": "E32",
+      "source": "Node34",
+      "port": "YES",
+      "target": "Node36"
+    },
+    {
+      "id": "E38",
+      "source": "Node37",
+      "port": "NEXT",
+      "target": "Node39"
+    },
+    {
+      "id": "E2",
+      "source": "RememberBuyMax",
+      "port": "NEXT",
+      "target": "Node46"
+    },
+    {
+      "id": "E45",
+      "source": "Node46",
+      "port": "NEXT",
+      "target": "End"
+    },
+    {
+      "id": "E46",
+      "source": "Node45",
+      "port": "NEXT",
+      "target": "Node38"
+    },
+    {
+      "id": "E37",
+      "source": "Node40",
+      "port": "NEXT",
+      "target": "Node34"
+    },
+    {
+      "id": "E13",
+      "source": "Node14",
+      "port": "NEXT",
+      "target": "Node20"
+    },
+    {
+      "id": "E14",
+      "source": "Node15",
+      "port": "NEXT",
+      "target": "Node17"
+    },
+    {
+      "id": "E19",
+      "source": "Node18",
+      "port": "YES",
+      "target": "RememberBuyMax"
+    },
+    {
+      "id": "E28",
+      "source": "Node31",
+      "port": "NEXT",
+      "target": "Node30"
+    },
+    {
+      "id": "E39",
+      "source": "Node47",
+      "port": "NEXT",
+      "target": "Node32"
+    },
+    {
+      "id": "E40",
+      "source": "Node32",
+      "port": "NEXT",
+      "target": "Node41"
+    },
+    {
+      "id": "E41",
+      "source": "Node41",
+      "port": "NEXT",
+      "target": "Node48"
+    },
+    {
+      "id": "E44",
+      "source": "Node43",
+      "port": "YES",
+      "target": "Node27"
+    },
+    {
+      "id": "E50",
+      "source": "Node53",
+      "port": "NO",
+      "target": "Node45"
+    },
+    {
+      "id": "E49",
+      "source": "Node53",
+      "port": "YES",
+      "target": "Node50"
+    },
+    {
+      "id": "E52",
+      "source": "Node52",
+      "port": "NEXT",
+      "target": "Node53"
+    },
+    {
+      "id": "E51",
+      "source": "Node50",
+      "port": "NEXT",
+      "target": "Node54"
+    },
+    {
+      "id": "E11",
+      "source": "Node11",
+      "port": "NEXT",
+      "target": "Node29"
+    },
+    {
+      "id": "E43",
+      "source": "Node29",
+      "port": "NEXT",
+      "target": "Node14"
+    },
+    {
+      "id": "E9",
+      "source": "Node43",
+      "port": "NO",
+      "target": "Node35"
+    },
+    {
+      "id": "E10",
+      "source": "Node35",
+      "port": "NEXT",
+      "target": "Node28"
+    },
+    {
+      "id": "E25",
+      "source": "Node28",
+      "port": "NEXT",
+      "target": "Node40"
+    },
+    {
+      "id": "E24",
+      "source": "Node26",
+      "port": "NEXT",
+      "target": "Node8"
+    },
+    {
+      "id": "E26",
+      "source": "Node8",
+      "port": "NEXT",
+      "target": "Node35"
+    },
+    {
+      "id": "E31",
+      "source": "Node9",
+      "port": "NEXT",
+      "target": "Node10"
+    },
+    {
+      "id": "E34",
+      "source": "Node10",
+      "port": "NEXT",
+      "target": "Node39"
+    },
+    {
+      "id": "E29",
+      "source": "Node30",
+      "port": "NEXT",
+      "target": "Node39"
+    },
+    {
+      "id": "E17",
+      "source": "Node18",
+      "port": "NO",
+      "target": "Node18"
+    },
+    {
+      "id": "E16",
+      "source": "Node44",
+      "port": "NEXT",
+      "target": "Node18"
+    },
+    {
+      "id": "E20",
+      "source": "Node39",
+      "port": "NEXT",
+      "target": "Node53"
+    },
+    {
+      "id": "E12",
+      "source": "Node13",
+      "port": "NEXT",
+      "target": "Node58"
+    },
+    {
+      "id": "E60",
+      "source": "Node58",
+      "port": "NEXT",
+      "target": "Node39"
+    },
+    {
+      "id": "E1",
+      "source": "Node19",
+      "port": "NEXT",
+      "target": "Node21"
+    },
+    {
+      "id": "E21",
+      "source": "Node21",
+      "port": "YES",
+      "target": "Node2"
+    },
+    {
+      "id": "E55",
+      "source": "Node21",
+      "port": "NO",
+      "target": "Node56"
+    },
+    {
+      "id": "E56",
+      "source": "Node56",
+      "port": "NEXT",
+      "target": "Node63"
+    },
+    {
+      "id": "E57",
+      "source": "Node63",
+      "port": "NO",
+      "target": "Node57"
+    },
+    {
+      "id": "E58",
+      "source": "Node63",
+      "port": "YES",
+      "target": "Node64"
+    },
+    {
+      "id": "E59",
+      "source": "Node64",
+      "port": "NEXT",
+      "target": "Node57"
+    },
+    {
+      "id": "E66",
+      "source": "Node57",
+      "port": "YES",
+      "target": "Node19"
+    },
+    {
+      "id": "E67",
+      "source": "Start",
+      "port": "NEXT",
+      "target": "Node57"
+    },
+    {
+      "id": "E68",
+      "source": "Node57",
+      "port": "NO",
+      "target": "Node44"
+    },
+    {
+      "id": "E3",
+      "source": "Node1",
+      "port": "NEXT",
+      "target": "Node3"
+    },
+    {
+      "id": "E4",
+      "source": "Node4",
+      "port": "NEXT",
+      "target": "Node5"
+    },
+    {
+      "id": "E5",
+      "source": "Node3",
+      "port": "NO",
+      "target": "Node5"
+    },
+    {
+      "id": "E6",
+      "source": "Node6",
+      "port": "NEXT",
+      "target": "Node7"
+    },
+    {
+      "id": "E7",
+      "source": "Node7",
+      "port": "NEXT",
+      "target": "Node4"
+    },
+    {
+      "id": "E8",
+      "source": "Node3",
+      "port": "YES",
+      "target": "Node6"
+    },
+    {
+      "id": "E54",
+      "source": "Node33",
+      "port": "NEXT",
+      "target": "Node65"
+    },
+    {
+      "id": "E69",
+      "source": "Node65",
+      "port": "NEXT",
+      "target": "Node21"
+    },
+    {
+      "id": "E30",
+      "source": "Node36",
+      "port": "NEXT",
+      "target": "Node43"
+    },
+    {
+      "id": "E33",
+      "source": "Node34",
+      "port": "NO",
+      "target": "Node43"
+    },
+    {
+      "id": "E27",
+      "source": "Node2",
+      "port": "NEXT",
+      "target": "Node33"
+    },
+    {
+      "id": "E35",
+      "source": "Node54",
+      "port": "NEXT",
+      "target": "Node52"
+    },
+    {
+      "id": "E36",
+      "source": "Node42",
+      "port": "NEXT",
+      "target": "Node22"
+    },
+    {
+      "id": "E42",
+      "source": "Node22",
+      "port": "NEXT",
+      "target": "Node49"
+    },
+    {
+      "id": "E47",
+      "source": "Node49",
+      "port": "NO",
+      "target": "Node51"
+    },
+    {
+      "id": "E48",
+      "source": "Node51",
+      "port": "NEXT",
+      "target": "Node55"
+    },
+    {
+      "id": "E53",
+      "source": "Node55",
+      "port": "NEXT",
+      "target": "Node22"
+    },
+    {
+      "id": "E61",
+      "source": "Node49",
+      "port": "YES",
+      "target": "Node29"
+    },
+    {
+      "id": "E62",
+      "source": "Node59",
+      "port": "NEXT",
+      "target": "Node61"
+    },
+    {
+      "id": "E63",
+      "source": "Node61",
+      "port": "NEXT",
+      "target": "Node60"
+    }
+  ],
+  "settings": {
+    "max_cycles": 10,
+    "round_wait_seconds": 1,
+    "node_handoff_seconds": 1,
+    "feature_rois": {
+      "char_Farmer": [
+        108,
+        931,
+        879,
+        338
+      ],
+      "char_Swordsmen": [
+        165,
+        928,
+        747,
+        319
+      ],
+      "bury": [
+        129,
+        1227,
+        473,
+        978
+      ]
+    }
+  },
+  "ui": {
+    "positions": {
+      "Start": {
+        "x": 1107.8875546060817,
+        "y": 1738.5935113732019
+      },
+      "RememberBuyMax": {
+        "x": 983.8035072341384,
+        "y": 2340.006740453404
+      },
+      "End": {
+        "x": 983.2300437198173,
+        "y": 2579.5682896933895
+      },
+      "Node11": {
+        "x": 1516.3961434155017,
+        "y": 1714.1429049710764
+      },
+      "Node12": {
+        "x": 1585.5441904084596,
+        "y": 2191.051537497752
+      },
+      "Node14": {
+        "x": 1534.8617848738063,
+        "y": 1945.0866410353456
+      },
+      "Node15": {
+        "x": 2963.3437201196684,
+        "y": 1902.0133826956321
+      },
+      "Node16": {
+        "x": 2958.0494148780044,
+        "y": 2181.530728259942
+      },
+      "Node17": {
+        "x": 2964.5365962706237,
+        "y": 2047.4492881062974
+      },
+      "Node20": {
+        "x": 1559.3274164624659,
+        "y": 2072.917379184957
+      },
+      "Node23": {
+        "x": 1299.9819969662115,
+        "y": 2538.121821206579
+      },
+      "Node24": {
+        "x": 1281.0024459221302,
+        "y": 2796.3799120164085
+      },
+      "Node25": {
+        "x": 1287.7675729284356,
+        "y": 2670.711674829494
+      },
+      "Node26": {
+        "x": 1776.652154962909,
+        "y": 1569.8924217669353
+      },
+      "Node27": {
+        "x": 1966.6888582415393,
+        "y": 2319.780604260937
+      },
+      "Node28": {
+        "x": 1770.7200533139098,
+        "y": 1961.768057410948
+      },
+      "Node34": {
+        "x": 2061.009028883468,
+        "y": 1830.016312562914
+      },
+      "Node36": {
+        "x": 2000.043947660682,
+        "y": 1950.574339612701
+      },
+      "Node40": {
+        "x": 2072.03219944745,
+        "y": 1703.1028804513703
+      },
+      "Node37": {
+        "x": 1977.1464174230928,
+        "y": 1397.2031155736663
+      },
+      "Node38": {
+        "x": 2436.9420347160103,
+        "y": 1872.8163294689512
+      },
+      "Node39": {
+        "x": 2441.6166307488193,
+        "y": 1483.6464845596338
+      },
+      "Node44": {
+        "x": 967.5037375832337,
+        "y": 2045.8310572161809
+      },
+      "Node45": {
+        "x": 2436.0569119497936,
+        "y": 1745.372797756983
+      },
+      "Node46": {
+        "x": 985.9454934220876,
+        "y": 2459.6947556345226
+      },
+      "Node47": {
+        "x": 2416.8784478177267,
+        "y": 2150.0176126494134
+      },
+      "Node48": {
+        "x": 2335.21597643438,
+        "y": 2581.150128657781
+      },
+      "Node18": {
+        "x": 994.9125835142809,
+        "y": 2210.432924235035
+      },
+      "Node30": {
+        "x": 2485.479882628343,
+        "y": 1228.1705891577742
+      },
+      "Node31": {
+        "x": 2528.5338598245826,
+        "y": 1094.4592410837147
+      },
+      "Node32": {
+        "x": 2401.9022912630317,
+        "y": 2302.646021463366
+      },
+      "Node41": {
+        "x": 2386.7478077945875,
+        "y": 2420.5859239212014
+      },
+      "Node43": {
+        "x": 1948.5546716296221,
+        "y": 2180.9013690842025
+      },
+      "Node13": {
+        "x": 2748.2279002763707,
+        "y": 1192.870741619422
+      },
+      "Node29": {
+        "x": 1524.194905237586,
+        "y": 1833.3724814666161
+      },
+      "Node50": {
+        "x": 2749.289557411779,
+        "y": 1418.82868354504
+      },
+      "Node52": {
+        "x": 2739.500058592245,
+        "y": 1656.7206289074495
+      },
+      "Node53": {
+        "x": 2441.159412325049,
+        "y": 1609.4468677123182
+      },
+      "Node54": {
+        "x": 2749.7790100802795,
+        "y": 1516.5973566155835
+      },
+      "Node35": {
+        "x": 1768.9621005315034,
+        "y": 1850.7688066314054
+      },
+      "Node8": {
+        "x": 1742.4824099180014,
+        "y": 1722.8076357123734
+      },
+      "Node9": {
+        "x": 2067.7435991613443,
+        "y": 1154.274745334352
+      },
+      "Node10": {
+        "x": 2041.1870838908897,
+        "y": 1281.5149612897158
+      },
+      "Node58": {
+        "x": 2612.676396698872,
+        "y": 1329.0013250854895
+      },
+      "Node2": {
+        "x": 283.0270968635872,
+        "y": 1530.5325299029987
+      },
+      "Node19": {
+        "x": 733.9238970337433,
+        "y": 1633.0269543963548
+      },
+      "Node21": {
+        "x": 316.9363483686518,
+        "y": 1731.5174380682529
+      },
+      "Node33": {
+        "x": 560.2253781206724,
+        "y": 1617.8158137104242
+      },
+      "Node56": {
+        "x": 325.12217294533866,
+        "y": 1870.6005335543337
+      },
+      "Node57": {
+        "x": 991.7067001243986,
+        "y": 1897.3342878407536
+      },
+      "Node63": {
+        "x": 567.803201752155,
+        "y": 1874.558787266685
+      },
+      "Node64": {
+        "x": 783.1654037058443,
+        "y": 1879.4171212709457
+      },
+      "Node1": {
+        "x": 724.1782130206252,
+        "y": 2053.5955792445584
+      },
+      "Node3": {
+        "x": 692.3874676478517,
+        "y": 2177.498357681599
+      },
+      "Node4": {
+        "x": 511.892352611316,
+        "y": 2545.297296814477
+      },
+      "Node5": {
+        "x": 681.3137481309009,
+        "y": 2669.645492276012
+      },
+      "Node6": {
+        "x": 514.3515533938435,
+        "y": 2300.6330648511716
+      },
+      "Node7": {
+        "x": 514.173883957395,
+        "y": 2427.169367554396
+      },
+      "Node65": {
+        "x": 527.5554559759506,
+        "y": 1750.6269887360677
+      },
+      "Node22": {
+        "x": 1263.612394144439,
+        "y": 1380.932539717784
+      },
+      "Node42": {
+        "x": 1263.439194465355,
+        "y": 1241.8726121491673
+      },
+      "Node49": {
+        "x": 1280.1406149970223,
+        "y": 1520.9375189841628
+      },
+      "Node51": {
+        "x": 1562.0445900557966,
+        "y": 1378.2121844076344
+      },
+      "Node55": {
+        "x": 1564.7273177190173,
+        "y": 1503.517179549267
+      },
+      "Node59": {
+        "x": 51.39383334995037,
+        "y": 2069.4977971550516
+      },
+      "Node60": {
+        "x": 33.71438189768449,
+        "y": 2362.6841364376505
+      },
+      "Node61": {
+        "x": 22.289281605675825,
+        "y": 2223.527240608662
+      }
+    },
+    "viewport": {
+      "x": -342.86530082038576,
+      "y": -876.9731249155138,
+      "zoom": 0.5187484920200013
+    }
+  },
+  "revision": "9c4190a45106dea71f1f002c05aa6e18a10db3cf1986135556787b8352ba4a42"
+}

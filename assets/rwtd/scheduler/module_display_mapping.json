@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "1080x2340": {
+      "expedition": {"offset_y": -50, "point_exempt_steps": ["1"]},
+      "expedition_again": {"offset_y": -50, "point_exempt_steps": ["1"]},
+      "expedition_again_easy": {"offset_y": -50, "point_exempt_steps": ["2"]}
+    }
+  }
+}

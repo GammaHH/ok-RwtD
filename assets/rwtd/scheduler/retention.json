@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "limits": {
+    "backups": {"max_records": 100, "max_bytes": 67108864, "max_days": 90},
+    "notifications": {"max_records": 2000, "max_bytes": 67108864, "max_days": 30},
+    "exceptions": {"max_records": 200, "max_bytes": 536870912, "max_days": 30},
+    "sessions": {"max_records": 1000, "max_bytes": 2147483648, "max_days": 30},
+    "history": {"max_records": 2000, "max_bytes": 134217728, "max_days": 90},
+    "cleanup_audit": {"max_records": 100, "max_bytes": 33554432, "max_days": 30},
+    "logs": {"max_records": 7, "max_bytes": 234881024, "max_days": 1},
+    "dedupe": {"max_records": 2000, "max_bytes": 1048576, "max_days": 90}
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
+    ]
+  },
+  "schema_version": 1,
+  "id": "ChestCollection",
+  "name": "Chest Collection 寶箱 (simulation contract)",
+  "version": 21,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.75,
+      "post_wait_seconds": 1.5,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "target_policy": "all_top_to_bottom",
+      "roi_tag": "chest",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "source",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "coco",
+            "threshold": 0.75,
+            "features": [
+              "chest"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 584,
+      "y": 1044,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "3",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 837,
+      "y": 1420,
+      "duration_ms": 50,
+      "repeat_count": 2
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "4",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 509,
+      "y": 2043,
+      "duration_ms": 50,
+      "repeat_count": 1
+    }
+  ],
+  "tags": {
+    "chest": {
+      "name": "chest",
+      "roi": [
+        892,
+        311,
+        188,
+        835
+      ]
+    }
+  },
+  "global_roi": [
+    755,
+    2218,
+    170,
+    165
+  ],
+  "role": "ChestCollection",
+  "simulation_seconds": 1,
+  "revision": "1ddb10fd6b0497633af382f7da21c489cde1e504efff56b97aff4614e6e1ff15"
+}

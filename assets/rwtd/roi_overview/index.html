@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RwtD ROI 總覽</title><link rel="stylesheet" href="/dashboard.css"></head>
+<body><header><strong>RwtD ROI 總覽</strong><button id="open">開啟介面</button><button id="saveGlobalTop">儲存目前 Feature 的全域設定</button><button id="close">關閉任務</button><span id="status">載入中</span></header>
+<main><section class="controls"><label>COCO Feature／原圖標記<select id="feature"></select></label>
+<label>從檔案總管匯入實機原尺寸評估圖片（最大 8 MiB／12 MP）<input id="import" type="file" accept="image/png,image/jpeg,image/webp"></label>
+<p>拖曳原圖繪製搜尋 ROI。橘色為原標記；藍色為草稿 ROI；綠色為評估命中。全域預設只套用至沒有明確 ROI 的位置。</p>
+<p>非 1080×2400 實機原圖會依實機相同規則轉為參考座標，COCO 搜尋四邊各擴張 10 px；紫色為評估使用的有效 ROI。1080×2400 原圖保持原範圍；儲存仍使用藍色原始 ROI。</p>
+<label><input id="full" type="checkbox" checked>全畫面搜尋</label><div class="roi"><label>X<input id="x" type="number" min="0" value="0"></label><label>Y<input id="y" type="number" min="0" value="0"></label><label>Width<input id="w" type="number" min="1" value="1080"></label><label>Height<input id="h" type="number" min="1" value="2400"></label></div>
+<label><input id="gray" type="checkbox">黑白化</label><label>影像縮放<select id="scale"><option value="0.5">0.5 ×</option><option value="1" selected>1 ×</option><option value="1.5">1.5 ×</option><option value="2">2 ×</option></select></label>
+<label><input id="keepTemplateSize" type="checkbox">保留模板原尺寸（不隨裝置解析度變形）</label><small>適用於尺寸未變的圖標；搜尋 ROI 與觸控座標轉換仍照常。可先預覽比較信心值，再儲存為此 Feature 的全域設定。</small>
+<label>評估信心門檻<input id="threshold" type="number" min="0" max="1" step="0.01" value="0.8"></label><button id="preview">處理預覽與信心評估</button><button id="save">儲存為此 Feature 的全域設定</button><button id="reload">重新載入設定／放棄草稿</button>
+<pre id="result">尚未評估</pre><h3>既有模組 ROI 特例（不是 Feature 全域設定）</h3><p>下方按鈕直接修改對應模組的 ROI；要儲存所選 Feature 的預設，請使用頁首「儲存目前 Feature 的全域設定」。</p><p id="default"></p><div id="overrides"></div><p>System 特例使用「儲存 System ROI 特例」按鈕明確授權本次儲存；僅更新此列 ROI。</p></section>
+<section class="visual"><h3>原圖／ROI 編輯</h3><canvas id="canvas" width="1080" height="2400"></canvas></section>
+<section class="visual"><h3>影像處理預覽</h3><img id="processed" alt="處理後圖片"><h3>模板預覽</h3><img id="template" alt="COCO 原標記模板"></section></main><script src="/roi_overview.js"></script></body></html>

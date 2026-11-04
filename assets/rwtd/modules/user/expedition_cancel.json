@@ -1,0 +1,67 @@
+{
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
+    ]
+  },
+  "schema_version": 1,
+  "id": "expedition_cancel",
+  "name": "取消遠征",
+  "version": 6,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 457,
+      "y": 1364,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "3",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 535,
+      "y": 2053,
+      "duration_ms": 50,
+      "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 267,
+      "y": 2053,
+      "duration_ms": 50,
+      "repeat_count": 1
+    }
+  ],
+  "revision": "426082bc8a1fc25485775ab1e47b0491f03a89be81713eacc9522246ae4aec5e"
+}

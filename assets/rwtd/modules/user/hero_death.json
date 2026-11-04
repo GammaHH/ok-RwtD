@@ -1,0 +1,224 @@
+{
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2400
+    ]
+  },
+  "schema_version": 1,
+  "id": "hero_death",
+  "name": "英雄報告處理",
+  "version": 26,
+  "steps": [
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "1",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 859,
+      "y": 1998,
+      "duration_ms": 50,
+      "repeat_count": 7,
+      "roi_tag": "DEATH",
+      "input_conditions": {
+        "evaluation": "left_to_right",
+        "clauses": [
+          {
+            "type": "ocr",
+            "join": "AND",
+            "text": "衰老死",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi_tag": "DEATH"
+          }
+        ]
+      },
+      "condition_effect": {
+        "action": "skip_step",
+        "when": "YES"
+      }
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "5",
+      "threshold": 0.8,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "unknown_no_retry": true,
+      "input_conditions": {
+        "evaluation": "left_to_right",
+        "clauses": [
+          {
+            "type": "ocr",
+            "join": "AND",
+            "text": "衰老死",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi_tag": "DEATH"
+          }
+        ]
+      },
+      "roi_tag": "cancel",
+      "target_policy": "single",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "source",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "ocr",
+            "threshold": 0.8,
+            "text": "取消",
+            "match": "contains"
+          }
+        ]
+      },
+      "condition_effect": {
+        "action": "skip_step",
+        "when": "YES"
+      }
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "2",
+      "threshold": 0.8,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 1,
+      "input_conditions": {
+        "evaluation": "left_to_right",
+        "clauses": [
+          {
+            "type": "ocr",
+            "join": "AND",
+            "text": "衰老死",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi_tag": "DEATH"
+          }
+        ]
+      },
+      "target_policy": "single",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "source",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "ocr",
+            "threshold": 0.8,
+            "text": "埋葬",
+            "match": "contains"
+          }
+        ]
+      }
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "3",
+      "threshold": 0.8,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": true,
+      "allow_unconfirmed_target": false,
+      "duration_ms": 50,
+      "repeat_count": 4,
+      "unknown_no_retry": true,
+      "input_conditions": {
+        "evaluation": "left_to_right",
+        "clauses": [
+          {
+            "type": "ocr",
+            "join": "AND",
+            "text": "衰老死",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi_tag": "DEATH"
+          }
+        ]
+      },
+      "target_policy": "all_top_to_bottom",
+      "target_conditions": {
+        "evaluation": "left_to_right",
+        "position_policy": "all",
+        "position_source": 0,
+        "clauses": [
+          {
+            "type": "coco_color",
+            "threshold": 0.8,
+            "features": [
+              "bury_2"
+            ],
+            "color_rgb": [
+              33,
+              133,
+              207
+            ],
+            "color_tolerance": 10,
+            "color_min_pixels": 9
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "埋葬",
+            "match": "exact",
+            "threshold": 0.8
+          }
+        ]
+      }
+    }
+  ],
+  "tags": {
+    "cancel": {
+      "name": "cancel",
+      "roi": [
+        0,
+        809,
+        1080,
+        678
+      ]
+    },
+    "DEATH": {
+      "name": "DEATH",
+      "roi": [
+        0,
+        273,
+        1080,
+        951
+      ]
+    }
+  },
+  "global_roi": [
+    129,
+    1227,
+    420,
+    997
+  ],
+  "revision": "ae512af2ee4263902a3fd9a33e03e33a45c5915eaba216a5f3a0a8fa043ef0f8"
+}
