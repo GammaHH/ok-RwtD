@@ -30,7 +30,8 @@ def start_bot(service,settings):
         if not permitted(interaction):
             await interaction.response.send_message('此使用者／伺服器／頻道未獲授權。',ephemeral=True)
             return
-        await interaction.response.defer(ephemeral=True,thinking=True)
+        # Authorized command results (including screenshots) are channel-visible.
+        await interaction.response.defer(ephemeral=False,thinking=True)
         try:
             future=service.mailbox.submit(str(interaction.id),command,payload)
             logging.getLogger(__name__).info('RWTD_DC_ACCEPT command=%s id=%s user=%s guild=%s channel=%s',

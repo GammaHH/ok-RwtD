@@ -1,2 +1,13 @@
-# Optional inbound control transport. Existing Webhook notifications do not need it.
+# Included by the Global profile. List transitive transport dependencies because
+# the packaging profile deliberately installs with --no-deps.
 discord.py>=2.4,<3
+aiohttp>=3.9,<4
+aiohappyeyeballs>=2.5,<3
+aiosignal>=1.4,<2
+attrs>=17.3
+frozenlist>=1.1.1
+multidict>=6,<7
+propcache>=0.2
+yarl>=1.17,<2
+idna>=2
+typing_extensions>=4.2

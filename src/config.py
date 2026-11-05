@@ -1,10 +1,11 @@
 """Application configuration for ok-RwtD (Rogue with the Dead)."""
 
 import os
+from pathlib import Path
+from src.rwtd.installed_identity import resolve_identity
 
 
-version = "dev"
-app_profile = os.environ.get("PYAPPIFY_APP_PROFILE", "")
+version, app_profile = resolve_identity(Path(__file__).resolve().parents[1], os.environ)
 
 
 gui_config = {
@@ -77,6 +78,7 @@ config = {
         "default_threshold": 0.8,
     },
     "version": version,
+    "profile": app_profile,
     "my_app": ["src.globals", "Globals"],
     "onetime_tasks": [
         ["ok", "DiagnosisTask"],
