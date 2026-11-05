@@ -1063,6 +1063,8 @@ class RwtdControlDashboardTask(BaseTask):
                                  padding_recognizer=padding_recognizer)
         self.bridge = bridge
         roi_model = roi_bridge = None
+        calibration_model = calibration_bridge = calibration_task = None
+        statistics_model = statistics_bridge = None
         runtime = DashboardRuntime(controller, self.restore_simulation, self.open_dashboard)
         controller.runtime_handler = runtime.command
         from src.rwtd.android_core.preview_worker import PreviewWorker
@@ -1080,6 +1082,16 @@ class RwtdControlDashboardTask(BaseTask):
                     roi_model.closing.set()
                 if roi_bridge:
                     roi_bridge.close()
+                if calibration_model:
+                    calibration_model.closing.set()
+                if calibration_bridge:
+                    calibration_bridge.close()
+                if statistics_model:
+                    statistics_model.closing.set()
+                if statistics_bridge:
+                    statistics_bridge.close()
+                if calibration_task and calibration_task.bridge is calibration_bridge:
+                    calibration_task.bridge = None
                 bridge.close()
                 self.bridge = None
                 self.trigger_frames.clear()
@@ -1101,7 +1113,42 @@ class RwtdControlDashboardTask(BaseTask):
                 bridge.embedded_frame_origin = None
                 self.log_warning('RWTD_ROI_WORKSPACE_UNAVAILABLE '+type(exc).__name__)
             from src.rwtd.farm_workspace import FarmWorkspace
-            workspace=FarmWorkspace(self,controller,runtime,roi_model)
+            try:
+                from src.rwtd.resolution_calibration_ui import CalibrationEditor
+                calibration_task = next((task for task in self.executor.onetime_tasks
+                    if type(task).__name__=='RwtdResolutionCalibrationTask'),None)
+                if calibration_task is None:
+                    raise ValueError('Resolution calibration TASK not registered')
+                calibration_task.root = self.root
+                calibration_model = CalibrationEditor(self.root, calibration_task._capture_calibration)
+                calibration_bridge = DashboardBridge(calibration_model,self.root/'assets/rwtd/calibration_ui',
+                    calibration_model.snapshot,calibration_model.image,max_command_bytes=9*1024**2,
+                    embedded_parent_origin=bridge.origin)
+                calibration_bridge.start()
+                calibration_task.bridge = calibration_bridge
+                bridge.embedded_frame_origins = [calibration_bridge.origin]
+                bridge.workspace_calibration_url = calibration_bridge.url+'&parent_origin='+bridge.origin
+            except Exception as exc:
+                if calibration_bridge:
+                    calibration_bridge.close()
+                if calibration_task:
+                    calibration_task.bridge = None
+                calibration_model = calibration_bridge = None
+                self.log_warning('RWTD_CALIBRATION_WORKSPACE_UNAVAILABLE '+type(exc).__name__)
+            try:
+                from src.rwtd.round_statistics_ui import RoundStatisticsEditor
+                statistics_model = RoundStatisticsEditor(self.root)
+                statistics_bridge = DashboardBridge(statistics_model,self.root/'assets/rwtd/statistics_ui',
+                    statistics_model.snapshot,statistics_model.image,embedded_parent_origin=bridge.origin)
+                statistics_bridge.start()
+                bridge.embedded_frame_origins.append(statistics_bridge.origin)
+                bridge.workspace_statistics_url = statistics_bridge.url+'&parent_origin='+bridge.origin
+            except Exception as exc:
+                if statistics_bridge:
+                    statistics_bridge.close()
+                statistics_model = statistics_bridge = None
+                self.log_warning('RWTD_STATISTICS_WORKSPACE_UNAVAILABLE '+type(exc).__name__)
+            workspace=FarmWorkspace(self,controller,runtime,roi_model,calibration=calibration_model,statistics=statistics_model)
             workspace.cleanup=cleanup
             bridge.workspace_host=workspace
             bridge.command_access=workspace.dashboard_access
@@ -1110,6 +1157,16 @@ class RwtdControlDashboardTask(BaseTask):
                     if workspace.closed or workspace.pending_handoff or workspace.current!='roi' or workspace.running:
                         raise ValueError('請先停止並儲存目前功能，再切到 ROI 總覽。')
                 roi_bridge.command_access=roi_access
+            if calibration_bridge:
+                def calibration_access(command):
+                    if workspace.closed or workspace.pending_handoff or workspace.current!='calibration' or workspace.running:
+                        raise ValueError('請先停止並儲存目前功能，再切到解析度對照。')
+                calibration_bridge.command_access=calibration_access
+            if statistics_bridge:
+                def statistics_access(command):
+                    if workspace.closed or workspace.pending_handoff or workspace.current!='statistics':
+                        raise ValueError('請先停止並儲存目前功能，再切到輪次統計。')
+                statistics_bridge.command_access=statistics_access
             bridge.start()
             self.info_set("Dashboard", bridge.origin)
             live_preview = self.configure_startup_preview()

@@ -12,6 +12,7 @@ class RwtdResolutionCalibrationTask(RwtdControlDashboardTask):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._rwtd_offline_editor = True
         self.name = 'RwtD 解析度校正 / Resolution calibration'
         self.description = '唯讀擷取實機，按模組／Step ID 對照調整 ROI 與觸控位置；獨立保存各解析度校正。'
         self.support_schedule_task = False
@@ -38,6 +39,13 @@ class RwtdResolutionCalibrationTask(RwtdControlDashboardTask):
         return frame, device
 
     def run(self):
+        workspace = getattr(self, '_native_workspace', None)
+        if workspace is not None and not workspace.closed:
+            self.model = workspace.calibration
+            try:
+                return workspace.serve(self, 'calibration')
+            finally:
+                self.model = None
         from src.rwtd.android_core.execution_lease import active
         root = Path(__file__).resolve().parents[1]
         if active(root): raise ValueError('請先手動停止並儲存 FARM，再啟動解析度校正')
@@ -56,7 +64,7 @@ class RwtdResolutionCalibrationTask(RwtdControlDashboardTask):
             if self.config.get('Open Calibration', True): self.open_calibration()
             while self.enabled and not self.exit_is_set() and not self.model.closing.is_set():
                 self.model.process_next()
-                self.sleep(.1)
+                self.model.closing.wait(.1)
         finally:
             self.model.closing.set()
             bridge.close()

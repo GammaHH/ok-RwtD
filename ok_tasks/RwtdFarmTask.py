@@ -153,6 +153,8 @@ class RwtdFarmTask(RwtdControlDashboardTask):
 
     def _save_round_timing(self, event):
         """Persist summaries even when detailed/timing logging is disabled."""
+        if event.get('outcome') != 'SUCCESS':
+            return  # Failure exits remain diagnostic events, not timing samples.
         try:
             from datetime import datetime
             from src.rwtd.android_core.round_timing_store import RoundTimingStore

@@ -5,14 +5,18 @@ from collections import deque
 
 
 class FarmWorkspace:
-    def __init__(self, host, controller, preview, roi, task=None):
+    def __init__(self, host, controller, preview, roi, task=None, calibration=None, statistics=None):
         self.host, self.controller, self.preview, self.roi = host, controller, preview, roi
+        self.calibration = calibration
+        self.statistics = statistics
         self.task = task or next((item for item in getattr(getattr(host,'executor',None),'onetime_tasks',[])
                                   if type(item).__name__=='RwtdFarmTask'),None)
         self.current = 'dashboard'
         tasks=getattr(getattr(host,'executor',None),'onetime_tasks',[])
         roi_task=next((item for item in tasks if type(item).__name__=='RwtdRoiOverviewTask'),None)
-        self.owners={'dashboard':host,'farm':self.task,'roi':roi_task}
+        calibration_task=next((item for item in tasks if type(item).__name__=='RwtdResolutionCalibrationTask'),None)
+        self.owners={'dashboard':host,'farm':self.task,'roi':roi_task,'calibration':calibration_task}
+        self.owners['statistics']=next((item for item in tasks if type(item).__name__=='RwtdRoundStatisticsTask'),None)
         self.pending_handoff=None
         self.dashboard_turn=None
         self.cleanup=None
@@ -61,6 +65,10 @@ class FarmWorkspace:
             return '請先停止 Dashboard 測試、監看與擷取，等待退出後再切換。'
         if self.roi and not self.roi.jobs.empty():
             return 'ROI 尚未完成目前工作，請稍後再切換。'
+        if self.calibration and not self.calibration.jobs.empty():
+            return '解析度對照尚未完成目前工作，請稍後再切換。'
+        if self.statistics and not self.statistics.jobs.empty():
+            return '輪次統計尚未完成，請稍後再切換。'
         return ''
 
     def dashboard_access(self, command):
@@ -78,10 +86,14 @@ class FarmWorkspace:
         result={'status':'SUCCESS'}
         try:
             if command=='switch':
-                if set(payload)!={'source','target'} or payload['source']!=self.current or payload['target'] not in {'dashboard','roi','farm'}:
+                if set(payload)!={'source','target'} or payload['source']!=self.current or payload['target'] not in self.owners:
                     raise ValueError('Workspace changed; refresh before switching')
                 if payload['target']=='roi' and self.roi is None:
                     raise ValueError('ROI service unavailable')
+                if payload['target']=='calibration' and self.calibration is None:
+                    raise ValueError('解析度對照服務不可用')
+                if payload['target']=='statistics' and self.statistics is None:
+                    raise ValueError('輪次統計服務不可用')
                 if payload['target']=='farm' and self.task is None:
                     raise ValueError('原生 FARM TASK 未註冊')
                 target=self.owners.get(payload['target'])
@@ -209,6 +221,10 @@ class FarmWorkspace:
             while owner.enabled and not owner.exit_is_set() and not self.preview.closing:
                 if view=='roi' and self.roi.closing.is_set():
                     break
+                if view=='calibration' and self.calibration.closing.is_set():
+                    break
+                if view=='statistics' and self.statistics.closing.is_set():
+                    break
                 self.process_next()
                 if self.pending_handoff:
                     break
@@ -218,6 +234,10 @@ class FarmWorkspace:
                     self.tick()
                 elif view=='roi':
                     self.roi.process_next()
+                elif view=='calibration':
+                    self.calibration.process_next()
+                elif view=='statistics':
+                    self.statistics.process_next()
                 self.controller.wake.wait(.2)
             if self.pending_handoff:
                 _,target=self.pending_handoff

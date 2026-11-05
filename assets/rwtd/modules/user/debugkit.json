@@ -8,7 +8,7 @@
   "schema_version": 1,
   "id": "debugkit",
   "name": "偵錯",
-  "version": 29,
+  "version": 30,
   "steps": [
     {
       "verification_policy": "manual",
@@ -81,6 +81,13 @@
             "type": "ocr",
             "join": "OR",
             "text": "下一步",
+            "match": "contains",
+            "threshold": 0.8
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "關閉",
             "match": "contains",
             "threshold": 0.8
           }
@@ -165,6 +172,13 @@
             "type": "ocr",
             "join": "OR",
             "text": "下一步",
+            "match": "contains",
+            "threshold": 0.7
+          },
+          {
+            "type": "ocr",
+            "join": "OR",
+            "text": "關閉",
             "match": "contains",
             "threshold": 0.7
           }

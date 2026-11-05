@@ -1,0 +1,8 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RwtD 輪次統計</title><link rel="stylesheet" href="/dashboard.css"><body>
+<header><h1>輪次統計</h1><button id="refresh">更新清單</button><button id="close">返回／關閉</button></header>
+<p>只統計正常完成且無失敗退出的輪次。未完成、失敗及無法驗證的舊 Log 紀錄不納入；主 FARM 與活動分開統計。</p>
+<form id="filters"><label>統計對象<select id="target"><option value="farm:1">第一關</option><option value="farm:2">第二關</option><option value="farm:3">第三關</option><option value="farm:4">第四關</option><option value="farm:5">第五關</option></select></label>
+<label>每個版本最近筆數<input id="rounds" type="number" min="1" max="100000" value="100" required></label>
+<label>版本（留白全部）<input id="version" placeholder="1.6、1.6.2 或 1.5~1.7"><span id="latest"></span></label><button id="generate">產生統計</button></form>
+<p id="message" role="status"></p><div id="downloads" hidden><button id="csv">下載 CSV</button><button id="markdown">下載 Markdown</button></div>
+<table><thead><tr><th>版本</th><th>Canvas</th><th>可用／統計筆數</th><th>平均（分鐘）</th><th>中位數</th><th>P90</th><th>最短／最長</th></tr></thead><tbody id="summary"></tbody></table><pre id="report"></pre><script src="/dashboard.js"></script></body></html>

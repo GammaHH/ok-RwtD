@@ -4,7 +4,7 @@ from functools import wraps
 
 def is_offline_editor(task):
     # Farm inherits the Dashboard implementation but still requires a device.
-    return (task is not None and type(task).__name__ == 'RwtdControlDashboardTask'
+    return (task is not None and type(task).__name__ in {'RwtdControlDashboardTask', 'RwtdResolutionCalibrationTask', 'RwtdRoundStatisticsTask'}
             and getattr(task, '_rwtd_offline_editor', False) is True)
 
 

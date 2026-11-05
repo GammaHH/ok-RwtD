@@ -12,5 +12,16 @@ assets/rwtd/manual_requests/
 assets/rwtd/presets/
 assets/rwtd/**/backups/
 assets/rwtd/scheduler/time_guards.json
+assets/rwtd/dashboard/ui_preferences.json
+assets/rwtd/calibration/
+main_debug.py
+web_main_debug.py
+ok/test/
+docs/
+tests/
+dev_tools/
+.agents/
+.github/
+publication-manifest.json
 pyappify_dist/
 packaging_logs/

@@ -19,9 +19,12 @@ class DashboardBridge:
         self.last_seen = time.monotonic()
         self.state_error = None
         self.workspace_roi_url = None
+        self.workspace_calibration_url = None
+        self.workspace_statistics_url = None
         self.workspace_host = None
         self.command_access = None
         self.embedded_frame_origin = None
+        self.embedded_frame_origins = []
         self.padding_preview_lock=threading.Lock()
         bridge = self
 
@@ -39,8 +42,10 @@ class DashboardBridge:
                 self.send_header("Content-Length", str(len(data)))
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("X-Content-Type-Options", "nosniff")
-                child = bridge.embedded_frame_origin
-                frame_source = "'self'" + (' '+child if child and re.fullmatch(r'http://127\.0\.0\.1:[0-9]{1,5}',child) else '')
+                children = [bridge.embedded_frame_origin, *bridge.embedded_frame_origins]
+                valid_children = dict.fromkeys(child for child in children if isinstance(child,str)
+                    and re.fullmatch(r'http://127\.0\.0\.1:[0-9]{1,5}',child))
+                frame_source = ' '.join(["'self'", *valid_children])
                 ancestor = embedded_parent_origin or "'none'"
                 self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' blob:; script-src 'self'; style-src 'self'; frame-src "+frame_source+"; frame-ancestors "+ancestor+"; object-src 'none'")
                 self.end_headers()
@@ -73,7 +78,9 @@ class DashboardBridge:
                         return
                     self.send(200, (bridge.assets / name).read_bytes(), kind)
                 elif path == '/api/workspace':
-                    self.send(200,json.dumps({'roi_url':bridge.workspace_roi_url}).encode('utf-8'))
+                    self.send(200,json.dumps({'roi_url':bridge.workspace_roi_url,
+                        'calibration_url':bridge.workspace_calibration_url,
+                        'statistics_url':bridge.workspace_statistics_url}).encode('utf-8'))
                 elif path == "/api/state":
                     status, data = bridge.state_response()
                     self.send(status, data)

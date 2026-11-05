@@ -1,12 +1,27 @@
 'use strict';
 (() => {
   const token = new URLSearchParams(location.hash.slice(1)).get('token') || sessionStorage.getItem('rwtd-calibration-token');
+  const parentKey='rwtd-calibration-parent:'+location.origin;
+  const workspaceParent=new URLSearchParams(location.hash.slice(1)).get('parent_origin') || sessionStorage.getItem(parentKey);
+  const embedded=window.parent!==window && /^http:\/\/127\.0\.0\.1:[0-9]{1,5}$/.test(workspaceParent||'');
+  if(embedded)sessionStorage.setItem(parentKey,workspaceParent);
   if(token)sessionStorage.setItem('rwtd-calibration-token',token);
   history.replaceState(null, '', location.pathname);
   const $ = id => document.getElementById(id);
   const labels = {NEW:'新增／未校正',VALID:'有效',CHANGED:'已變更／待校正',DELETED:'已刪除',ERROR:'原轉換無效'};
   let state, selection, fields = {}, overrides = new Set(), dirty = false, busy = false;
   let images = {}, urls = {}, drag = null;
+  let readingReference = false;
+  addEventListener('message',async event=>{
+    if(!embedded || event.origin!==workspaceParent || event.source!==window.parent)return;
+    if(event.data?.type==='rwtd-workspace-can-leave'){
+      const reason=busy||readingReference||drag?'解析度對照操作尚未完成，請等待後再切換。':dirty?'解析度對照有未儲存校正，請先儲存再切換。':!state?'解析度對照尚未就緒，請稍後再試。':'';
+      window.parent.postMessage({type:'rwtd-workspace-leave-result',id:event.data.id,reason},workspaceParent);
+    }
+    if(event.data?.type==='rwtd-workspace-activate' && !busy && !dirty && !readingReference){
+      try{await command('refresh');render();}catch(error){notice(error.message);}
+    }
+  });
   function notice(text) {$('message').textContent = text;}
   function changed() {dirty = true; $('dirty').textContent = '尚未儲存'; draw();}
   function discard() {return !dirty || confirm('目前有未儲存校正，確定放棄後切換？');}
@@ -136,12 +151,15 @@
   $('module').onchange=async()=>{const id=$('module').value;if(!discard()){$('module').value=selection?.module||'';return;}if(id)await select(id);};
   $('capture').onclick=async()=>{await command('capture');notice(state.message);await loadImage('frame',$('live'));};
   $('refresh').onclick=async()=>{if(!discard())return;await command('refresh');dirty=false;selection=null;$('module').value='';render();};
-  $('close').onclick=async()=>{if(!discard())return;await command('close');dirty=false;notice('任務已關閉');};
+  $('close').onclick=async()=>{if(embedded){window.parent.postMessage({type:'rwtd-workspace-dashboard'},workspaceParent);return;}if(!discard())return;await command('close');dirty=false;notice('任務已關閉');};
   $('upload').onchange=async event=>{
     const file=event.target.files[0];if(!file)return;
     if(file.size>6*1024**2){notice('參考圖不能超過 6 MiB');return;}
-    const reader=new FileReader();reader.readAsDataURL(file);
-    reader.onload=async()=>{await command('reference',{image:reader.result.split(',')[1]});dirty=true;$('dirty').textContent='參考圖尚未儲存';$('reference-label').textContent=state.reference_label;await loadImage('source',$('saved'));};
+    const reader=new FileReader();readingReference=true;
+    reader.onerror=()=>{readingReference=false;notice('參考圖讀取失敗');};
+    reader.onabort=()=>{readingReference=false;};
+    reader.onload=async()=>{try{await command('reference',{image:reader.result.split(',')[1]});dirty=true;$('dirty').textContent='參考圖尚未儲存';$('reference-label').textContent=state.reference_label;await loadImage('source',$('saved'));}finally{readingReference=false;}};
+    reader.readAsDataURL(file);
   };
   $('save').onclick=async()=>{
     if(!selection)return;
