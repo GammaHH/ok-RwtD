@@ -84,11 +84,18 @@
       button.textContent='校正此 Step';button.disabled=['DELETED','ERROR'].includes(row.status);
       button.dataset.blocked=String(['DELETED','ERROR'].includes(row.status));
       button.onclick=async()=>{if(!discard())return;await select(chosen,row.step_id);};
-      td.append(button);tr.append(td);$('steps').append(tr);
+      td.append(button);
+      if (row.name==='SwipeCalibration' && button.dataset.blocked==='false') {
+        const swipe=document.createElement('button');
+        swipe.textContent='試滑一次';
+        swipe.setAttribute('aria-label','Step '+row.step_id+' 試滑一次（送到實機）');
+        swipe.onclick=()=>testSwipe(chosen,row.step_id);
+        td.append(swipe);
+      }
+      tr.append(td);$('steps').append(tr);
     }
     selection=state.selection;
     $('editor').hidden=!selection;
-    $('test-swipe').hidden=!selection?.can_test_swipe;
     $('swipe-result').textContent='';
     if (!selection) return;
     fields=structuredClone(selection.fields); overrides=new Set(selection.overrides);
@@ -164,19 +171,29 @@
   $('preview-size').onchange=()=>{
     $('preview-pair').style.setProperty('--preview-width',$('preview-size').value+'px');
   };
-  $('test-swipe').onclick=async()=>{
-    if(!selection?.can_test_swipe || busy)return;
+  async function testSwipe(module, step_id){
+    if(busy)return;
+    if(selection?.module!==module || selection?.step_id!==step_id){
+      if(!discard())return;
+      await select(module,step_id);
+    }
+    if(busy || selection?.module!==module || selection?.step_id!==step_id)return;
+    if(!selection.can_test_swipe){
+      $('swipe-result').textContent='此 Step 無法試滑，請重新載入清單確認。';
+      return;
+    }
     const points=Object.fromEntries(['x,y','mid_x,mid_y','end_x,end_y']
       .filter(key=>fields[key]).map(key=>[key,fields[key].value]));
-    $('swipe-result').textContent='正在試滑…';
+    const label='Step '+step_id+'：';
+    $('swipe-result').textContent=label+'正在試滑…';
     try{
       await command('test_swipe',{module:selection.module,step_id:selection.step_id,
         signature:selection.signature,points});
       $('size').textContent='目前解析度：'+state.resolution+' · 擷取 '+new Date(state.captured_utc).toLocaleTimeString();
       await loadImage('frame',$('live'));
-      $('swipe-result').textContent=state.message;
-    }catch(error){$('swipe-result').textContent=error.message;}
-  };
+      $('swipe-result').textContent=label+state.message;
+    }catch(error){$('swipe-result').textContent=label+error.message;}
+  }
   $('refresh').onclick=async()=>{if(!discard())return;await command('refresh');dirty=false;selection=null;$('module').value='';render();};
   $('close').onclick=async()=>{if(embedded){window.parent.postMessage({type:'rwtd-workspace-dashboard'},workspaceParent);return;}if(!discard())return;await command('close');dirty=false;notice('任務已關閉');};
   $('upload').onchange=async event=>{

@@ -6,11 +6,12 @@
 <p id="message" role="status"></p>
 <label>模組 <select id="module"><option value="">請選擇模組</option></select></label>
 <p>有效＝可直接套用；已變更＝舊校正停用；新增＝尚未校正；已刪除＝保留舊紀錄供核對，不會挪給其他步驟。</p>
+<p id="swipe-result" role="status"></p>
 <table><thead><tr><th>Step ID</th><th>操作</th><th>狀態</th><th>變更欄位</th><th></th></tr></thead><tbody id="steps"></tbody></table>
 <section id="editor" hidden>
 <p id="warning"></p><p id="reference-label"></p>
 <label>匯入此 Step 的參考圖（PNG／JPG，原生完整截圖，最多 6 MiB）<input id="upload" type="file" accept="image/png,image/jpeg"></label>
-<nav><label>預覽大小 <select id="preview-size"><option value="300">小</option><option value="480" selected>中</option><option value="680">大</option></select></label><button id="test-swipe" hidden>試滑一次（送到實機）</button><span id="swipe-result" role="status"></span></nav>
+<nav><label>預覽大小 <select id="preview-size"><option value="300">小</option><option value="480" selected>中</option><option value="680">大</option></select></label></nav>
 <div class="pair" id="preview-pair"><article><h2>存檔預覽 → 本解析度（唯讀）</h2><canvas id="saved"></canvas><p>框線為原模組＋既有轉換，不含新校正。</p></article><article><h2>實機畫面（可調整）</h2><canvas id="live"></canvas><p>拖曳選取點／ROI；拖曳 ROI 右下角縮放。其他欄位以細線標示。</p></article></div>
 <label>座標／ROI 欄位 <select id="field"></select></label>
 <div id="values"></div><button id="reset">此欄恢復預設轉換</button>
