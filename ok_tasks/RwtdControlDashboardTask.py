@@ -653,7 +653,7 @@ class RwtdControlDashboardTask(BaseTask):
                                 check['threshold'],coco_roi=check.get('roi'))
                         sample=expedition_cooldown_sample(sample,recognize_completion,
                             node.get('_expedition_completion_clause'))
-                        allowed=self.manual.time_guards.prepare(node['id'],clause,sample)
+                        allowed=self.manual.time_guards.prepare(node,clause,sample)
                     else:
                         from src.rwtd.android_core.canvas_entry_guard import variable_result
                         allowed=variable_result(clause,{key:sample})
@@ -707,7 +707,7 @@ class RwtdControlDashboardTask(BaseTask):
                     evidence['clause_index']=next(i for i,c in enumerate(guard_rows) if c is clause)
                 return value
             allowed=evaluate(node['entry_guard'],payload.get('variables',{}),traced_observe,
-                lambda c:self.manual.time_guards.allowed(node['id'],c),trace=guard_trace)
+                lambda c:self.manual.time_guards.allowed(node,c),trace=guard_trace)
             getattr(self,'_remember_failure_regions',lambda *args:None)(node,frame,[{'kind':r.get('kind','coco'),
                 'label':r.get('text') or r.get('feature') or node['id'],
                 'roi':r.get('roi') or [0,0,1080,2400]} for r in recognition])

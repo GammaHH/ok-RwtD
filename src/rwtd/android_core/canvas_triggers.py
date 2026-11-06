@@ -513,7 +513,7 @@ class TriggerTaskScheduler:
                         return None
                     from src.rwtd.android_core.canvas_entry_guard import probe,evaluate,needs_frame
                     if not needs_frame(node['entry_guard']):
-                        self._complete_entry_guard(task,node,evaluate(node['entry_guard'],task['variables'],lambda c:None,lambda c:self.time_guards.allowed(node['id'],c)))
+                        self._complete_entry_guard(task,node,evaluate(node['entry_guard'],task['variables'],lambda c:None,lambda c:self.time_guards.allowed(node,c)))
                         return None
                     task['pending']=probe(node,self.graph['settings'],task.get('entry_guard_attempts',{}).get(node['id'],0)+1)
                     return self._effect(task)
@@ -995,7 +995,7 @@ class TriggerTaskScheduler:
                     key=clause['variable'];value=self.observations.get('shared_ocr',{}).get(key)
                     sample=value if isinstance(value,dict) else {'value':value,'verified':type(value) in (int,float)}
                     if clause.get('mode')=='ocr_cooldown':
-                        return self.time_guards.prepare(effect['node']['id'],clause,sample)
+                        return self.time_guards.prepare(effect['node'],clause,sample)
                     from .canvas_entry_guard import variable_result
                     return variable_result(clause,{key:sample})
                 if clause['kind']=='ocr':
@@ -1004,7 +1004,7 @@ class TriggerTaskScheduler:
                     return ocr_allowed(sample.get('tokens'),clause) if isinstance(sample,dict) and sample.get('verified') is True else None
                 sample=self.simulation_result({'node':dict(clause,kind='coco')})
                 return sample.get('detected') if sample.get('verified') is True else None
-            allowed=evaluate(effect['node']['entry_guard'],effect.get('variables',{}),observe,lambda c:self.time_guards.allowed(effect['node']['id'],c))
+            allowed=evaluate(effect['node']['entry_guard'],effect.get('variables',{}),observe,lambda c:self.time_guards.allowed(effect['node'],c))
             return {'verified':allowed is not None,'detected':allowed,'frame_id':'simulation-entry-guard'}
         node = effect['node']
         if node['kind'] == 'ocr_decision':

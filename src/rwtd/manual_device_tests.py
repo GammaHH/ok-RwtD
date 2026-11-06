@@ -1126,7 +1126,7 @@ class ManualDeviceTests:
                     or self.store.get(module_id).get('revision')!=revision):
                 return None
             if not needs_frame(guard):
-                allowed=evaluate(guard,variables,lambda c:None,lambda c:self.time_guards.allowed(node['id'],c))
+                allowed=evaluate(guard,variables,lambda c:None,lambda c:self.time_guards.allowed(node,c))
             else:
                 result=self.task.canvas_effect({'node':probe(node,settings,attempt+1),'source':'android_manual',
                                                'fresh_frame':True,'variables':variables},stop)

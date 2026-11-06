@@ -54,7 +54,17 @@ class TimeGuards:
                     self.records[key]=max(value,self.records.get(key,0))
 
     def key(self,node_id,clause):
+        if isinstance(node_id,dict):
+            node=node_id
+            if node.get('share_guard_time_by_name') is True and clause.get('kind')=='time':
+                identity=json.dumps([node['name'].strip(),clause['mode']],ensure_ascii=False)
+                return '@shared:guard-time:'+hashlib.sha256(identity.encode('utf-8')).hexdigest()
+            node_id=node['id']
         return self.namespace+':'+node_id+':'+hashlib.sha256(json.dumps(clause,sort_keys=True).encode()).hexdigest()[:20]
+
+    def pending_key(self,node,clause):
+        # An uncommitted OCR sample belongs to the exact node that read it.
+        return self.key(node['id'] if isinstance(node,dict) else node,clause)
 
     def allowed(self,node_id,clause):
         from .farm_round_variable import is_round_guard,validate as validate_round
@@ -64,7 +74,13 @@ class TimeGuards:
                     if self.farm_rounds is not None else None)
         validate(clause)
         with self.lock:
-            now=self.clock();last=self.records.get(self.key(node_id,clause))
+            key=self.key(node_id,clause)
+            if key.startswith('@shared:'):
+                # Main Farm and activities hold separate instances. See a
+                # completion written by another Canvas before evaluating.
+                with _state_lock:
+                    self._read()
+            now=self.clock();last=self.records.get(key)
             if clause['mode']=='ocr_cooldown':
                 return now>=last if last is not None else None
             if clause['mode']=='cooldown':
@@ -77,7 +93,7 @@ class TimeGuards:
         """Freeze a fresh OCR duration; reading alone never starts cooldown."""
         from .shared_ocr import numeric
         validate(clause)
-        key=self.key(node_id,clause)
+        key=self.pending_key(node_id,clause)
         with self.lock:
             self.pending.pop(key,None)
             if (clause['mode']=='ocr_cooldown' and sample.get('verified') is True
@@ -104,9 +120,9 @@ class TimeGuards:
         with self.lock, _state_lock:
             self._read()
             for clause in clauses:
-                key=self.key(node['id'],clause)
+                key=self.key(node,clause)
                 if clause['mode']=='ocr_cooldown':
-                    duration=self.pending.pop(key,None)
+                    duration=self.pending.pop(self.pending_key(node,clause),None)
                     if duration is not None:self.records[key]=self.clock()+duration
                 else:self.records[key]=self.clock()
             self.records=dict(sorted(self.records.items(),key=lambda pair:pair[1],reverse=True)[:10000])
@@ -115,6 +131,6 @@ class TimeGuards:
     def blocked(self,node):
         guard=node.get('entry_guard',{});conditions=guard.get('conditions',[guard])
         from .farm_round_variable import is_round_guard
-        values=[self.allowed(node['id'],c) for c in conditions if c.get('kind')=='time' or is_round_guard(c)]
+        values=[self.allowed(node,c) for c in conditions if c.get('kind')=='time' or is_round_guard(c)]
         return bool(values) and (any(v is False for v in values) if guard.get('operator','and')=='and'
             else len(values)==len(conditions) and all(v is False for v in values))

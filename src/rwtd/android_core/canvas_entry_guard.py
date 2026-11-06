@@ -4,6 +4,11 @@ import math
 
 
 def validate(node, producers):
+    if 'share_guard_time_by_name' in node:
+        enabled=node['share_guard_time_by_name']
+        if (type(enabled) is not bool or 'entry_guard' not in node
+                or enabled and (not isinstance(node.get('name'),str) or not node['name'].strip())):
+            raise ValueError('Shared Guard time requires a named node with an attached Guard')
     if 'entry_guard_retry' in node:
         if ('entry_guard' not in node or type(node['entry_guard_retry']) is not int
                 or not 1 <= node['entry_guard_retry'] <= 1000):
@@ -13,6 +18,10 @@ def validate(node, producers):
     guard = node['entry_guard']
     if node['kind'] == 'guard' or not isinstance(guard, dict):
         raise ValueError('Invalid attached Guard')
+    if node.get('share_guard_time_by_name') is True:
+        rows=clauses(guard)
+        if not isinstance(rows,list) or not any(isinstance(row,dict) and row.get('kind')=='time' for row in rows):
+            raise ValueError('Shared Guard time requires at least one time condition')
     if 'conditions' in guard:
         if (set(guard)!={'operator','conditions'} or guard['operator'] not in {'and','or'}
                 or not isinstance(guard['conditions'],list) or not 1<=len(guard['conditions'])<=10):
@@ -68,6 +77,8 @@ def probe(node,settings=None,attempt=1):
     return {'id':node['id'],'kind':'entry_guard','entry_guard':copy.deepcopy(node['entry_guard']),
             '_entry_guard_for':node['id'],'_guard_attempt_limit':retry_limit(node,settings or {}),
             '_guard_attempt':attempt,
+            **({'name':node['name'],'share_guard_time_by_name':True}
+               if node.get('share_guard_time_by_name') is True else {}),
             **({'_expedition_completion_clause':{
                 'kind':'coco','feature':'expedition_done','match':'detected',
                 'threshold':node.get('threshold',.8),

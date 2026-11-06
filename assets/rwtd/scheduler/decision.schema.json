@@ -253,6 +253,11 @@
           "minimum": 1,
           "maximum": 1000
         },
+        "share_guard_time_by_name": {
+          "type": "boolean",
+          "default": false,
+          "description": "Share completed time Guard records across Canvas nodes with the same name and time mode."
+        },
         "suppress_failure_notification": {
           "type": "boolean",
           "default": false,

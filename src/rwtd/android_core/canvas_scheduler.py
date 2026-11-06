@@ -52,7 +52,8 @@ def validate_canvas(value, module_ids):
     from src.rwtd.android_core.canvas_ocr import normalize_conditions
     normalize_conditions(nodes)
     allowed = {"id", "kind", "name", "chain", "entry_guard", "repeat_runs", "module", "field", "op", "value", "seconds", "feature", "roi", "tag", "threshold", "enabled", "priority", "handler", "match", "dictionary", "output_key", "variable", "message", "cooldown_seconds", "step_id", "feature_map", "execution_scope", "task_type", "trigger_interval", "preempt_operations", "ocr_cases", "ocr_retry", "ocr_region", "ocr_feature", "ocr_coco_threshold", "ocr_mode", "ocr_output_type", "ocr_trim", "ocr_conversion"}
-    allowed.update({'entry_guard_retry', 'unknown_no_retry', 'suppress_failure_notification'})
+    allowed.update({'entry_guard_retry', 'unknown_no_retry', 'suppress_failure_notification',
+                    'share_guard_time_by_name'})
     allowed.update({'progress_exit_on_limit','input_source','end_step_id'})
     allowed.add('round_timing')
     for n in nodes:
@@ -576,7 +577,7 @@ class CanvasRuntime:
             return False
         from src.rwtd.android_core.canvas_entry_guard import probe,evaluate,needs_frame,result_allowed
         if not needs_frame(guard):
-            self._complete_entry_guard(node,evaluate(guard,self.variables,lambda c:None,lambda c:self.time_guards.allowed(node['id'],c)))
+            self._complete_entry_guard(node,evaluate(guard,self.variables,lambda c:None,lambda c:self.time_guards.allowed(node,c)))
         elif self.source=='simulation':
             from src.rwtd.android_core.canvas_triggers import TriggerTaskScheduler
             helper=TriggerTaskScheduler();helper.observations=self.observations;helper.time_guards=self.time_guards
