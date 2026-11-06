@@ -160,11 +160,13 @@ class FarmRuntime:
         self.activity_history = self.activity_history[-50:]
 
     def _activity_start(self, repeat=False):
+        continuing_batch = repeat
         if not repeat:
             self.activity = self.activity_queue.pop(0)
+            continuing_batch = self.activity.pop('deferred_batch', False)
             manual_runs=self.activity.pop('manual_runs',0)
             scheduled_runs=(self.activity['initial_runs_left'] if not self.activity['initial_completed']
-                            else int(self.clock()>=self.activity['next_due']))
+                            else int(not continuing_batch and self.clock()>=self.activity['next_due']))
             self.activity['batch_runs'] = max(1,manual_runs+scheduled_runs)
             self.activity['repetition'] = 1
         child = FarmRuntime(self.activity['graph'], self.modules, self.effect, self.queued,
@@ -180,6 +182,8 @@ class FarmRuntime:
                             time_guards=self.activity.get('time_guards'),
                             exhaustion_callback=self.exhaustion_callback)
         self.activity_paused_at = self.clock()
+        if not continuing_batch:
+            self.activity['next_due'] = self.activity_paused_at + self.activity['interval_seconds']
         self.activity_child = child
         self.activity['status'] = 'RUNNING'
         self._activity_event('STARTED', round=self.schedule.rounds,
@@ -293,12 +297,12 @@ class FarmRuntime:
                 remaining=max(0,self.activity['batch_runs']-self.activity['repetition'])
                 extra=max(0,remaining-self.activity['initial_runs_left'])
                 if extra:self.activity['manual_runs']=self.activity.get('manual_runs',0)+extra
+                if remaining:
+                    self.activity['deferred_batch'] = True
                 # Internal Canvas routing has finished; this is solely the next
                 # cross-Canvas insertion gate. Keep due jobs/repeats pending for
                 # the next safe main Farm round instead of discarding or running
                 # them directly after an unsafe predecessor.
-                if self.activity['initial_completed']:
-                    self.activity['next_due'] = self.clock()+self.activity['interval_seconds']
                 self.activity['status'] = 'WAITING'
                 for entry in self.activity_queue:
                     entry['status'] = 'WAITING'
@@ -311,7 +315,6 @@ class FarmRuntime:
                 self.activity['repetition'] += 1
                 self._activity_start(repeat=True)
                 return True
-            self.activity['next_due'] = self.clock()+self.activity['interval_seconds']
             self.activity['status'] = 'WAITING'
             if self.activity_queue:
                 self._activity_start()
@@ -604,7 +607,8 @@ class FarmRuntime:
                     self.reason='Discord 指定主 FARM 本輪完成後停止；未插入活動'
                     return
                 due_activities = [entry for entry in self.activities
-                                  if self.clock() >= entry['next_due'] or entry.get('manual_runs',0)>0]
+                                  if entry.get('deferred_batch') or entry.get('manual_runs',0)>0
+                                  or self.clock() >= entry['next_due']]
                 if normal_round:
                     self.activity_queue = due_activities
                     if self.activity_queue:

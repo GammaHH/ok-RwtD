@@ -98,7 +98,7 @@ class ActivityScheduleDialog(QDialog):
             interval.addWidget(field)
             interval.addWidget(QLabel(label))
             units.append(field)
-        form.addRow('後續最短間隔', interval)
+        form.addRow('冷卻間隔（從每批第一場開始算）', interval)
         layout.addLayout(form)
         row = dict(box=box, enabled=enabled, name=name, canvas=canvas,
                    initial=initial, units=units, extra=dict(saved))
