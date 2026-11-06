@@ -465,7 +465,7 @@ class RwtdControlDashboardTask(BaseTask):
                                  kwargs.get('threshold') or self.ocr_default_threshold,context,Box)
             return returned
 
-    def prepare_three_point_swipe(self):
+    def prepare_three_point_swipe(self, *, physical=False):
         # Called on the existing task thread, only for an explicit manual action.
         backend, device = self.manual_backend()
         interaction = self.executor.interaction
@@ -482,8 +482,9 @@ class RwtdControlDashboardTask(BaseTask):
             current_backend, current_device = self.manual_backend()
             if current_backend is not backend or current_device != device or self.executor.interaction is not interaction:
                 raise ValueError("Selected official device changed before continuous gesture")
-            return perform(touch, [self.screen_point(*point) for point in points], duration_ms,
-                           bounds=(self.screen_geometry().width, self.screen_geometry().height))
+            geometry = self.screen_geometry()
+            path = points if physical else [geometry.point(*point) for point in points]
+            return perform(touch, path, duration_ms, bounds=(geometry.width, geometry.height))
         return execute
 
     def detect_manual_features(self, frame, features, threshold, coco_roi=None):
@@ -1120,7 +1121,8 @@ class RwtdControlDashboardTask(BaseTask):
                 if calibration_task is None:
                     raise ValueError('Resolution calibration TASK not registered')
                 calibration_task.root = self.root
-                calibration_model = CalibrationEditor(self.root, calibration_task._capture_calibration)
+                calibration_model = CalibrationEditor(self.root, calibration_task._capture_calibration,
+                                                      calibration_task._test_calibration_swipe)
                 calibration_bridge = DashboardBridge(calibration_model,self.root/'assets/rwtd/calibration_ui',
                     calibration_model.snapshot,calibration_model.image,max_command_bytes=9*1024**2,
                     embedded_parent_origin=bridge.origin)

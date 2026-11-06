@@ -46,7 +46,7 @@
           state = next; return next;
         }
       }
-      throw Error('操作仍未確認，請勿重複儲存；重載頁面確認結果。');
+      throw Error('操作仍未確認，請先查看實機或重載頁面確認結果。');
     } catch(error) {notice(error.message); throw error;}
     finally {busy=false; controls();}
   }
@@ -88,6 +88,8 @@
     }
     selection=state.selection;
     $('editor').hidden=!selection;
+    $('test-swipe').hidden=!selection?.can_test_swipe;
+    $('swipe-result').textContent='';
     if (!selection) return;
     fields=structuredClone(selection.fields); overrides=new Set(selection.overrides);
     dirty=false;$('dirty').textContent='';
@@ -119,6 +121,11 @@
     const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);
     c.fillStyle='#000';c.fillRect(0,0,canvas.width,canvas.height);
     if(image)c.drawImage(image,0,0,canvas.width,canvas.height);
+    if(selection.can_test_swipe){
+      const path=['x,y','mid_x,mid_y','end_x,end_y'].filter(key=>rows[key]).map(key=>rows[key].value);
+      c.strokeStyle='#48c5ef';c.lineWidth=4;c.beginPath();
+      c.moveTo(...path[0]);for(const point of path.slice(1))c.lineTo(...point);c.stroke();
+    }
     const active=$('field').value;
     for (const [key,row] of Object.entries(rows)) {
       const [x,y,w,h]=row.value;c.strokeStyle=key===active?'#ffe45a':'#48c5ef';c.fillStyle=c.strokeStyle;
@@ -129,7 +136,11 @@
     }
   }
   function draw(){if(!selection)return;drawOne($('saved'),images.source,selection.defaults);drawOne($('live'),images.frame,fields);}
-  function point(event){const c=$('live'),r=c.getBoundingClientRect();return[(event.clientX-r.left)*c.width/r.width,(event.clientY-r.top)*c.height/r.height];}
+  function point(event){
+    const c=$('live'),r=c.getBoundingClientRect();
+    return [(event.clientX-r.left-c.clientLeft)*c.width/c.clientWidth,
+            (event.clientY-r.top-c.clientTop)*c.height/c.clientHeight];
+  }
   $('live').onpointerdown=event=>{
     if(busy)return;const key=$('field').value,row=fields[key];if(!row)return;
     const p=point(event),[x,y,w,h]=row.value; const tolerance=24;
@@ -150,6 +161,22 @@
   $('reset').onclick=()=>{const k=$('field').value;if(!fields[k])return;fields[k]=structuredClone(selection.defaults[k]);overrides.delete(k);changed();editorValues();};
   $('module').onchange=async()=>{const id=$('module').value;if(!discard()){$('module').value=selection?.module||'';return;}if(id)await select(id);};
   $('capture').onclick=async()=>{await command('capture');notice(state.message);await loadImage('frame',$('live'));};
+  $('preview-size').onchange=()=>{
+    $('preview-pair').style.setProperty('--preview-width',$('preview-size').value+'px');
+  };
+  $('test-swipe').onclick=async()=>{
+    if(!selection?.can_test_swipe || busy)return;
+    const points=Object.fromEntries(['x,y','mid_x,mid_y','end_x,end_y']
+      .filter(key=>fields[key]).map(key=>[key,fields[key].value]));
+    $('swipe-result').textContent='正在試滑…';
+    try{
+      await command('test_swipe',{module:selection.module,step_id:selection.step_id,
+        signature:selection.signature,points});
+      $('size').textContent='目前解析度：'+state.resolution+' · 擷取 '+new Date(state.captured_utc).toLocaleTimeString();
+      await loadImage('frame',$('live'));
+      $('swipe-result').textContent=state.message;
+    }catch(error){$('swipe-result').textContent=error.message;}
+  };
   $('refresh').onclick=async()=>{if(!discard())return;await command('refresh');dirty=false;selection=null;$('module').value='';render();};
   $('close').onclick=async()=>{if(embedded){window.parent.postMessage({type:'rwtd-workspace-dashboard'},workspaceParent);return;}if(!discard())return;await command('close');dirty=false;notice('任務已關閉');};
   $('upload').onchange=async event=>{

@@ -14,7 +14,7 @@ import numpy as np
 
 from .android_core.module_store import ModuleStore, safe_path
 from .android_core.resolution_calibration import (
-    CalibrationStore, RELATIVE, geometry_fields, native_fields, step_signature,
+    CalibrationStore, POINTS, RELATIVE, geometry_fields, native_fields, step_signature, validate_native,
 )
 from .android_core.module_display_mapping import ModuleDisplayMapping
 from .android_core.screen_geometry import ScreenGeometry
@@ -41,9 +41,10 @@ def project_reference(frame, geometry):
 
 
 class CalibrationEditor:
-    def __init__(self, root, capture):
+    def __init__(self, root, capture, swipe=None):
         self.root = Path(root)
         self.capture = capture
+        self.swipe = swipe
         self.store = CalibrationStore(self.root)
         self.modules = ModuleStore(rwtd_profile(root, self.validate_step))
         self.lock = threading.RLock()
@@ -125,7 +126,7 @@ class CalibrationEditor:
     def enqueue(self, request_id, command, payload):
         if (not isinstance(request_id, str) or not 1 <= len(request_id) <= 100
                 or not isinstance(payload, dict) or command not in {
-                    'capture', 'select', 'save', 'remove', 'reference', 'close', 'refresh'}):
+                    'capture', 'select', 'save', 'remove', 'reference', 'close', 'refresh', 'test_swipe'}):
             raise ValueError('Invalid calibration command')
         with self.lock:
             if request_id in self.receipts: return self.receipts[request_id]
@@ -185,6 +186,7 @@ class CalibrationEditor:
             for key, row in saved['fields'].items(): fields[key] = copy.deepcopy(row)
         self.state['selection'] = {'module': module_id, 'module_revision': module['revision'],
             'step_id': step_id, 'signature': step_signature(self.source),
+            'can_test_swipe': self.swipe is not None and self.source['name'] == 'SwipeCalibration',
             'fields': fields, 'defaults': default_fields,
             'overrides': list(saved['fields']) if valid else [],
             'saved_fields': copy.deepcopy(saved['fields']) if saved and not valid else None,
@@ -238,12 +240,42 @@ class CalibrationEditor:
             finally: temp.unlink(missing_ok=True)
         return stamp
 
+    def _test_swipe(self, payload):
+        selection = self.state['selection']
+        if not selection or not selection['can_test_swipe']:
+            raise ValueError('請先選擇可試滑的滑動 Step')
+        if any(payload.get(key) != selection[key] for key in ('module', 'step_id', 'signature')):
+            raise ValueError('選取的 Step 已變更；請重新載入')
+        keys = [f'{x},{y}' for x, y in POINTS if x in self.source]
+        draft = payload.get('points')
+        if not isinstance(draft, dict) or set(draft) != set(keys):
+            raise ValueError('滑動觸點不完整')
+        points = [draft[key] for key in keys]
+        for point in points:
+            validate_native('point', point, self.geometry)
+        if all(point == points[0] for point in points):
+            raise ValueError('滑動路徑至少需要兩個不同位置')
+        from .android_core.execution_lease import acquire
+        with acquire(self.root, self):
+            if self.modules.get(self.module['id'])['revision'] != self.module['revision']:
+                raise ValueError('模組已更新；請重新選取 Step')
+            self._capture()
+            self.swipe(points, self.source['duration_ms'], self.device)
+            try:
+                self._capture()
+            except Exception as exc:
+                self.state['message'] = f'試滑已送出，但更新截圖失敗：{exc}'
+            else:
+                self.state['message'] = '試滑已送出並刷新實機畫面；草稿仍可調整或儲存'
+
     def command(self, command, payload):
         if command == 'close': self.closing.set(); return
         if command == 'capture':
             self._capture()
             self._render_reference()
-            self.state['message'] = '已擷取實機畫面；校正不會送出手機點擊'
+            self.state['message'] = '已擷取實機畫面'
+        elif command == 'test_swipe':
+            self._test_swipe(payload)
         elif command == 'refresh':
             self.refresh()
             self.module = self.source = None
