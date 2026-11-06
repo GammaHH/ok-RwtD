@@ -459,6 +459,12 @@
         "operator": "and",
         "conditions": [
           {
+            "kind": "coco",
+            "feature": "reborn",
+            "threshold": 0.8,
+            "match": "detected"
+          },
+          {
             "kind": "time",
             "mode": "ocr_cooldown",
             "variable": "ExpeditionTime"

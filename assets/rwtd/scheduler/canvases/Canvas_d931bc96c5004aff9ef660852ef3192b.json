@@ -887,6 +887,14 @@
       "kind": "module",
       "name": "執行模組",
       "module": "expedition_cancel"
+    },
+    {
+      "id": "RebornBeforeExpedition",
+      "kind": "coco",
+      "name": "遠征前：重生圖示",
+      "feature": "reborn",
+      "match": "detected",
+      "threshold": 0.8
     }
   ],
   "edges": [
@@ -1308,7 +1316,7 @@
       "id": "E61",
       "source": "Node63",
       "port": "NO",
-      "target": "Node62"
+      "target": "RebornBeforeExpedition"
     },
     {
       "id": "E62",
@@ -1320,7 +1328,7 @@
       "id": "E63",
       "source": "Node64",
       "port": "NEXT",
-      "target": "Node62"
+      "target": "RebornBeforeExpedition"
     },
     {
       "id": "E64",
@@ -1350,11 +1358,23 @@
       "id": "E68",
       "source": "Start",
       "port": "NEXT",
-      "target": "Node62"
+      "target": "RebornBeforeExpedition"
     },
     {
       "id": "E70",
       "source": "Node62",
+      "port": "NO",
+      "target": "Node44"
+    },
+    {
+      "id": "RebornBeforeExpeditionYes",
+      "source": "RebornBeforeExpedition",
+      "port": "YES",
+      "target": "Node62"
+    },
+    {
+      "id": "RebornBeforeExpeditionNo",
+      "source": "RebornBeforeExpedition",
       "port": "NO",
       "target": "Node44"
     }
@@ -1694,6 +1714,10 @@
       "Node65": {
         "x": 677.5144712128404,
         "y": 1525.9647203869167
+      },
+      "RebornBeforeExpedition": {
+        "x": 1164.0470990292845,
+        "y": 1626.43805482378
       }
     },
     "viewport": {
@@ -1701,6 +1725,5 @@
       "y": -163.20158646619063,
       "zoom": 0.22000000000000033
     }
-  },
-  "revision": "6169875e000fcc14b7dfb6449285204952c907d1648ab1c833576db1a813a253"
+  }
 }

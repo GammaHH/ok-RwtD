@@ -455,6 +455,12 @@
         "operator": "and",
         "conditions": [
           {
+            "kind": "coco",
+            "feature": "reborn",
+            "threshold": 0.8,
+            "match": "detected"
+          },
+          {
             "kind": "time",
             "mode": "ocr_cooldown",
             "variable": "ExpeditionTime"
@@ -1819,6 +1825,5 @@
       "y": -811.9216852504442,
       "zoom": 0.5187484920200021
     }
-  },
-  "revision": "2a4097bbc2e0824da0cb7b174620eb131b82e445adfb93941c627d09c6377ef4"
+  }
 }
