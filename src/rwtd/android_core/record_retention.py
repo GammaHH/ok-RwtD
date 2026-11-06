@@ -27,7 +27,8 @@ STAMP=r'\d{8}T\d{6}_\d{6}Z_[0-9a-f]{8}'
 
 
 def limits(root,category):
-    path=safe_path(root,'assets/rwtd/scheduler/retention.json')
+    from .user_data import definition_root
+    path=safe_path(definition_root(root),'assets/rwtd/scheduler/retention.json')
     rules=DEFAULTS
     if path.exists():
         config=json.loads(path.read_text(encoding='utf-8-sig'))

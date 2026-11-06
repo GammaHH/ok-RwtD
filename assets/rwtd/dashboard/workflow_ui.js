@@ -67,7 +67,7 @@ WorkflowModel.validateTargetConditions=function(step){
   if(r?.type!=='padding_coco')continue;
   const modes={coco:['check_feature','match'],ocr:['check_text','check_text_match'],number:['check_op','check_value'],percent:['check_op','check_value','percent_fallback'],region:['region_priority','region_fallback']};
   const kind=r.check_kind??'coco';
-  const fields=['type','join','features','feature_priority','threshold','a_tag','b_tag','a_roi','b_roi','check_kind','check_threshold','padding_y','offset_x','offset_y','check_width','check_height','selection_mode','selection_index',...(Object.hasOwn(modes,kind)?modes[kind]:[])];
+  const fields=['type','join','features','feature_priority','threshold','a_tag','b_tag','a_roi','b_roi','check_kind','check_threshold','padding_y','offset_x','offset_y','check_width','check_height','selection_mode','selection_index','b_filters',...(Object.hasOwn(modes,kind)?modes[kind]:[])];
   if(!Object.hasOwn(modes,kind))throw Error('PADDING B 辨識類型無效');
   if(!['paired','index'].includes(r.selection_mode??'paired')||r.selection_mode==='index'&&!Object.hasOwn(r,'selection_index')||Object.hasOwn(r,'selection_index')&&(!Number.isInteger(r.selection_index)||r.selection_index<1||r.selection_index>100))throw Error('PADDING 順位需為 1～100 的整數');
   if(Object.keys(r).some(k=>!fields.includes(k)))throw Error('PADDING COCO 含未知欄位');
@@ -82,6 +82,17 @@ WorkflowModel.validateTargetConditions=function(step){
   if(['number','percent'].includes(kind)&&(!['eq','ne','gt','gte','lt','lte'].includes(r.check_op)||!Number.isFinite(r.check_value)||(kind==='percent'?(r.check_value<0||r.check_value>100):Math.abs(r.check_value)>1e15)))throw Error('請設定 PADDING B 的比較方式與數值（百分比 0～100）');
   if(kind==='region'&&(!Array.isArray(r.region_priority)||r.region_priority.length<1||r.region_priority.length>30||r.region_priority.some(name=>typeof name!=='string'||!name.trim()||name.length>200)||new Set(r.region_priority.map(name=>name.trim())).size!==r.region_priority.length||typeof (r.region_fallback??false)!=='boolean'))throw Error('請輸入 1～30 個不重複的區域名稱');
   if(kind==='percent'&&(Object.hasOwn(r,'percent_fallback')&&typeof r.percent_fallback!=='boolean'||r.percent_fallback&&(r.selection_mode??'paired')!=='paired'))throw Error('百分比保底需使用 A／B 配對');
+  if(Object.hasOwn(r,'b_filters')){
+   if(!Array.isArray(r.b_filters)||r.b_filters.length>8||r.b_filters.length&&(r.selection_mode??'paired')!=='paired')throw Error('B 額外篩選限配對模式，最多八個');
+   for(const filter of r.b_filters){
+    const mode=filter?.check_kind??'coco';
+    const keys=['join','check_kind','check_threshold',...(Object.hasOwn(modes,mode)?modes[mode]:[])];
+    if(!filter||!['coco','ocr','number','percent'].includes(mode)||Object.hasOwn(filter,'percent_fallback')||Object.keys(filter).some(k=>!keys.includes(k)))throw Error('B 篩選設定無效');
+    const clause={type:'padding_coco',features:r.features,...filter};
+    for(const key of ['a_tag','a_roi','b_tag','b_roi'])if(Object.hasOwn(r,key))clause[key]=r[key];
+    this.validateTargetConditions({...step,target_conditions:{evaluation:'left_to_right',position_policy:'source',position_source:0,clauses:[clause]}});
+   }
+  }
   const modern=['offset_x','offset_y','check_width','check_height'];
   if(Object.hasOwn(r,'padding_y')&&modern.some(k=>Object.hasOwn(r,k)))throw Error('舊版上下擴張不可與偏移／寬高混用');
   for(const k of ['offset_x','offset_y'])if(Object.hasOwn(r,k)&&(!Number.isInteger(r[k])||r[k]<-2400||r[k]>2400))throw Error('偏移量需為 -2400～2400 整數');

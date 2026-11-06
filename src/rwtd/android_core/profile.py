@@ -16,6 +16,11 @@ class AndroidProfile:
     preview_root: str = ""
     exception_root: str = ""
     notification_root: str = ""
+    persistent_root: Path | None = None
+
+    @property
+    def definitions_root(self):
+        return self.persistent_root or self.project_root
 
     @property
     def modules_root(self):

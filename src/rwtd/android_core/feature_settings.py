@@ -41,7 +41,8 @@ def template_for_geometry(template,bbox,geometry,options):
 
 
 def load(root):
-    path = safe_path(root, RELATIVE)
+    from .user_data import definition_root
+    path = safe_path(definition_root(root), RELATIVE)
     stamp = (path.stat().st_mtime_ns, path.stat().st_size) if path.exists() else None
     key = str(path)
     with _lock:
@@ -67,7 +68,8 @@ def save(root, feature, options, expected_revision):
         if feature not in feature_names(root):
             raise ValueError('Unknown COCO feature')
         data['features'][feature] = validate(options)
-        atomic_json(safe_path(root, RELATIVE), data)
+        from .user_data import definition_root
+        atomic_json(safe_path(definition_root(root), RELATIVE), data)
         return revision(data)
 
 

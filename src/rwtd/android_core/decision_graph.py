@@ -103,6 +103,7 @@ from src.rwtd.android_core.execution_lease import definition_edit
 class DecisionGraphStore:
     def __init__(self, profile, module_store, canvas_id=None):
         self.profile, self.modules = profile, module_store
+        self.definitions_root = getattr(profile, 'definitions_root', profile.project_root)
         self.canvas_id=canvas_id
         self.execution_locked = False
         self.input_locked = None  # None retains legacy execution-lock behavior.
@@ -113,10 +114,10 @@ class DecisionGraphStore:
     def path(self, relative):
         if relative == 'decision.json' and self.active_id() != 'default':
             relative='canvases/'+identifier(self.active_id())+'.json'
-        return safe_path(self.profile.project_root, self.profile.data_root + "/scheduler/" + relative)
+        return safe_path(self.definitions_root, self.profile.data_root + "/scheduler/" + relative)
 
     def registry_path(self):
-        return safe_path(self.profile.project_root,self.profile.data_root+'/scheduler/canvases.json')
+        return safe_path(self.definitions_root,self.profile.data_root+'/scheduler/canvases.json')
 
     def registry(self):
         with self._read_lock:
@@ -171,7 +172,7 @@ class DecisionGraphStore:
         if len(registry['entries'])>=1000:raise ValueError('Canvas file limit reached (1000)')
         graph=validate_graph(value,{m['id']:m for m in self.modules.catalog()})
         canvas_id='Canvas_'+uuid.uuid4().hex
-        path=safe_path(self.profile.project_root,self.profile.data_root+'/scheduler/canvases/'+canvas_id+'.json')
+        path=safe_path(self.definitions_root,self.profile.data_root+'/scheduler/canvases/'+canvas_id+'.json')
         atomic_json(path,graph)
         registry['entries'][canvas_id]={'name':name.strip()};registry['active']=canvas_id
         atomic_json(self.registry_path(),registry);self.canvas_id=None
@@ -259,7 +260,7 @@ class DecisionGraphStore:
             atomic_json(self.path("backups/decision_" + uuid.uuid4().hex + ".json"), previous)
         atomic_json(path, graph)
         from .record_retention import enforce
-        enforce(self.profile.project_root,'backups',self.profile.data_root+'/scheduler/backups')
+        enforce(self.definitions_root,'backups',self.profile.data_root+'/scheduler/backups')
         return graph
 
     def trigger_tasks(self):

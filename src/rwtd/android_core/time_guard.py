@@ -28,7 +28,8 @@ def validate(clause):
 
 class TimeGuards:
     def __init__(self,root=None,clock=time.time,namespace='default'):
-        self.root,self.clock=root,clock
+        from .user_data import definition_root
+        self.root,self.clock=definition_root(root) if root else None,clock
         from .module_store import identifier
         self.namespace=identifier(namespace)
         self.lock=threading.RLock()

@@ -74,11 +74,64 @@ window.createTargetConditionEditor=function(onChange){
     host.append(fallbackLabel);
    }
   }
+  paddingFilters(host,row,features);
   const rectLabel=document.createElement('label'),rectInput=document.createElement('input');rectLabel.textContent='偏移與檢查 ROI（X 偏移,Y 偏移,寬,高）';rectInput.placeholder='+20,-20,54,54';rectInput.value=row.check_width&&row.check_height?[row.offset_x??0,row.offset_y??0,row.check_width,row.check_height].join(','):'';rectInput.onchange=()=>{const values=rectInput.value.split(',').map(v=>v.trim());if(values.length!==4||values.some(v=>!/^[-+]?\d+$/.test(v))){rectInput.setCustomValidity('請輸入四個整數，例如 +20,-20,54,54');rectInput.reportValidity();return;}const[x,y,w,h]=values.map(Number);if(Math.abs(x)>2400||Math.abs(y)>2400||w<1||w>1080||h<1||h>2400){rectInput.setCustomValidity('偏移需在 ±2400，寬 1～1080，高 1～2400');rectInput.reportValidity();return;}rectInput.setCustomValidity('');delete row.padding_y;Object.assign(row,{offset_x:x,offset_y:y,check_width:w,check_height:h});active=true;render();onChange();};rectLabel.append(rectInput);host.append(rectLabel);
   for(const[key,title,min,max,step]of [['check_threshold','B 信心門檻',.5,1,.01],['offset_x','X 偏移量（+ 右／− 左）',-2400,2400,1],['offset_y','Y 偏移量（+ 下／− 上）',-2400,2400,1],['check_width','檢查 ROI 寬度（px）',1,1080,1],['check_height','檢查 ROI 高度（px）',1,2400,1]]){const label=document.createElement('label'),input=document.createElement('input');label.textContent=title;input.type='number';Object.assign(input,{min,max,step,value:row[key]??(key==='check_threshold'?.8:key.startsWith('offset_')?0:'')});input.placeholder=key==='check_width'?'空白沿用 B TAG 寬度':key==='check_height'?'空白沿用 A 目標高度':'';input.onchange=()=>{if(key!=='check_threshold'){delete row.padding_y;row.offset_x??=0;row.offset_y??=0;}if(input.value==='')delete row[key];else row[key]=Number(input.value);active=true;onChange();};label.append(input);host.append(label);}
   if(row.padding_y!==undefined){const legacy=document.createElement('small');legacy.textContent='舊版上下擴張 '+row.padding_y+' px 暫時保留；修改任一偏移／寬高欄位後，改用新的偏移矩形。';host.append(legacy);}
   const hint=document.createElement('small');hint.textContent='例：+20, −20, 54, 54 = 從 B 左緣右移 20、從 A 對應 Y 上移 20，以 54×54 檢查；超出 B TAG 的部分裁切。此列只提供保留的 A 目標位置。';host.append(hint);
   const previewButton=document.createElement('button'),previewResult=document.createElement('div');previewButton.type='button';previewButton.textContent='預覽配對（不點擊）';previewButton.onclick=()=>previewPadding(row,previewButton,previewResult);host.append(previewButton,previewResult);
+ }
+ function paddingFilters(host,row,features){
+  if(row.selection_mode==='index')return;
+  const filters=row.b_filters||[];
+  const changed=()=>{active=true;onChange();};
+  for(const [index,filter] of filters.entries()){
+   const group=document.createElement('fieldset'),legend=document.createElement('legend');
+   legend.textContent='B 篩選 '+(index+2)+'（共用同一個 B 檢查框）';group.append(legend);
+   function field(title,control){
+    const label=document.createElement('label');label.append(document.createTextNode(title),control);group.append(label);
+   }
+   function pick(title,options,value,change){
+    const input=document.createElement('select');
+    for(const [key,name] of options)input.add(new Option(name,key));
+    if(value&&!options.some(([key])=>key===value))input.add(new Option(value+'（未找到）',value));
+    input.value=value;input.onchange=()=>{change(input.value);changed();};field(title,input);
+   }
+   function entry(title,key,numeric,placeholder=''){
+    const input=document.createElement('input');input.type=numeric?'number':'text';
+    input.step=numeric?'any':'';input.maxLength=200;input.placeholder=placeholder;input.value=filter[key]??'';
+    input.onchange=()=>{
+     if(numeric&&input.value==='')delete filter[key];
+     else filter[key]=numeric?input.valueAsNumber:input.value.trim();
+     changed();
+    };field(title,input);
+   }
+   const kind=filter.check_kind||'coco';
+   pick('與前面結果結合',[['AND','AND'],['OR','OR']],filter.join||'AND',v=>filter.join=v);
+   pick('辨識類型',[['coco','COCO 圖示'],['ocr','OCR 文字'],['number','OCR 數字'],['percent','OCR 百分比']],kind,v=>{
+    const defaults=v==='coco'?{check_feature:'',match:'disappeared'}:v==='ocr'?{check_text:'',check_text_match:'exact'}:v==='percent'?{check_op:'lt',check_value:100}:{check_op:'gte'};
+    filters[index]={join:filter.join||'AND',check_kind:v,...defaults};
+    if(filter.check_threshold!==undefined)filters[index].check_threshold=filter.check_threshold;
+    render();
+   });
+   if(kind==='coco'){
+    pick('Feature',features,filter.check_feature||'',v=>filter.check_feature=v);
+    pick('圖示條件',[['disappeared','不存在'],['detected','存在']],filter.match||'disappeared',v=>filter.match=v);
+   }else if(kind==='ocr'){
+    pick('文字比對',[['exact','完全相同'],['contains','包含']],filter.check_text_match||'exact',v=>filter.check_text_match=v);
+    entry('尋找文字','check_text',false);
+   }else{
+    pick('數值比較',[['eq','='],['ne','≠'],['gt','>'],['gte','≥'],['lt','<'],['lte','≤']],filter.check_op||'gte',v=>filter.check_op=v);
+    entry('比較數值','check_value',true);
+   }
+   entry('信心門檻','check_threshold',true,'0.8');
+   const remove=document.createElement('button');remove.type='button';remove.textContent='移除此 B 篩選';
+   remove.onclick=()=>{filters.splice(index,1);if(!filters.length)delete row.b_filters;render();changed();};
+   group.append(remove);host.append(group);
+  }
+  const add=document.createElement('button');add.type='button';add.textContent='＋新增 B 篩選條件';add.disabled=filters.length>=8;
+  add.onclick=()=>{(row.b_filters??=[]).push({join:'AND',check_kind:'coco',check_feature:'',match:'disappeared'});render();changed();};
+  host.append(add);
  }
  async function previewPadding(row,button,host){
   const targetPolicy=el('targetMultiplicity').value;
@@ -120,7 +173,8 @@ window.createTargetConditionEditor=function(onChange){
     for(const hit of c.matches||[])box(hit.bbox,'#26fa7c',id+' · '+clause.check_feature);
     const bLabel=clause.check_feature||clause.check_text||(clause.check_kind==='region'?'區域名稱':'數字 '+clause.check_op+' '+clause.check_value);
     const reading=c.ocr_tokens?.map(token=>token.text).filter(Boolean).join(' · ');
-    const detail=document.createElement('small');detail.textContent=id+' · '+(c.anchor_feature||clause.features.join('|'))+' ↔ '+bLabel+'：'+(result.bypassed_b?'略過 B':c.detected===null?'UNKNOWN':c.detected?'有命中':'未命中')+(reading?'（OCR：'+reading+'）':'')+' → '+(c.accepted?'符合':'排除');host.append(detail);
+    const filters=(c.filter_results||[]).map(f=>f.check.join+' '+(f.check.check_feature||f.check.check_text||f.check.check_kind)+'='+ (f.result===null?'UNKNOWN':f.result?'YES':'NO')).join(' · ');
+    const detail=document.createElement('small');detail.textContent=id+' · '+(c.anchor_feature||clause.features.join('|'))+' ↔ '+bLabel+'：'+(result.bypassed_b?'略過 B':c.detected===null?'UNKNOWN':c.detected?'有命中':'未命中')+(reading?'（OCR：'+reading+'）':'')+(filters?' · '+filters:'')+' → '+(c.accepted?'符合':'排除');host.append(detail);
    }
    host.append(svg);
   }catch(error){host.textContent=stage+'失敗：'+error.message;}finally{button.disabled=false;}

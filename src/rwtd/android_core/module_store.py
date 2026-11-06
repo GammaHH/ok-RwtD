@@ -154,7 +154,7 @@ class ModuleStore:
             feature_signature = None
             self._catalog_cache.clear()
         for kind in ("system", "user"):
-            directory = safe_path(self.root, self.profile.modules_root + "/" + kind)
+            directory = safe_path(self.profile.definitions_root, self.profile.modules_root + "/" + kind)
             if not directory.exists():
                 continue
             for path in sorted(directory.glob("*.json")):
@@ -203,7 +203,7 @@ class ModuleStore:
         kind = matches[0]["kind"] if matches else "user"
         if kind == "system" and not allow_system_update:
             raise ValueError("Explicit System save or import authorization required")
-        path = safe_path(self.root, f"{self.profile.modules_root}/{kind}/{data['id']}.json")
+        path = safe_path(self.profile.definitions_root, f"{self.profile.modules_root}/{kind}/{data['id']}.json")
         if path.exists():
             previous = self.get(data["id"])
             if expected_revision != previous["revision"]:
@@ -213,13 +213,13 @@ class ModuleStore:
             if ({k:v for k,v in data.items() if k not in ignored} ==
                     {k:v for k,v in previous.items() if k not in ignored}):
                 return {k:v for k,v in previous.items() if k != 'kind'}
-            backup = safe_path(self.root, f"{self.profile.modules_root}/{kind}/backups/{data['id']}_{uuid.uuid4().hex}.json")
+            backup = safe_path(self.profile.definitions_root, f"{self.profile.modules_root}/{kind}/backups/{data['id']}_{uuid.uuid4().hex}.json")
             atomic_json(backup, {key: val for key, val in previous.items() if key != "kind"})
             data["version"] = previous["version"] + 1
             data = validate_module(data, self.profile.step_validator)
         atomic_json(path, data)
         from .record_retention import enforce
-        enforce(self.root,'backups',f"{self.profile.modules_root}/{kind}/backups")
+        enforce(self.profile.definitions_root,'backups',f"{self.profile.modules_root}/{kind}/backups")
         return data
 
     @definition_edit
@@ -235,15 +235,15 @@ class ModuleStore:
             graph = DecisionGraphStore(self.profile, self, item['id']).load()
             if graph and any(node.get("module") == module_id for node in graph["nodes"]):
                 raise ValueError("Rebind Canvas " + item['name'] + " before deleting a referenced module")
-        backup = safe_path(self.root, f"{self.profile.modules_root}/user/backups/deleted_{module_id}_{uuid.uuid4().hex}.json")
+        backup = safe_path(self.profile.definitions_root, f"{self.profile.modules_root}/user/backups/deleted_{module_id}_{uuid.uuid4().hex}.json")
         atomic_json(backup, {key: val for key, val in previous.items() if key != "kind"})
-        safe_path(self.root, f"{self.profile.modules_root}/user/{module_id}.json").unlink()
+        safe_path(self.profile.definitions_root, f"{self.profile.modules_root}/user/{module_id}.json").unlink()
         from .record_retention import enforce
-        enforce(self.root,'backups',f"{self.profile.modules_root}/user/backups",protected={backup.name})
+        enforce(self.profile.definitions_root,'backups',f"{self.profile.modules_root}/user/backups",protected={backup.name})
         return str(backup)
 
     def scheduler(self):
-        path = safe_path(self.root, self.profile.data_root + "/scheduler/config.json")
+        path = safe_path(self.profile.definitions_root, self.profile.data_root + "/scheduler/config.json")
         if not path.exists():
             return {item["role"]: item["id"] for item in self.catalog() if item.get("role") and item["kind"] == "system"}
         data = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -265,10 +265,10 @@ class ModuleStore:
             raise ValueError("Unknown role")
         for module_id in roles.values():
             self.get(module_id)
-        path = safe_path(self.root, self.profile.data_root + "/scheduler/config.json")
+        path = safe_path(self.profile.definitions_root, self.profile.data_root + "/scheduler/config.json")
         if path.exists():
-            atomic_json(safe_path(self.root, self.profile.data_root + "/scheduler/backups/" + uuid.uuid4().hex + ".json"), json.loads(path.read_text(encoding="utf-8")))
+            atomic_json(safe_path(self.profile.definitions_root, self.profile.data_root + "/scheduler/backups/" + uuid.uuid4().hex + ".json"), json.loads(path.read_text(encoding="utf-8")))
         atomic_json(path, {"schema_version": 1, "roles": roles})
         from .record_retention import enforce
-        enforce(self.root,'backups',self.profile.data_root+'/scheduler/backups')
+        enforce(self.profile.definitions_root,'backups',self.profile.data_root+'/scheduler/backups')
         return roles

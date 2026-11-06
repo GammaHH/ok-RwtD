@@ -31,7 +31,7 @@ class StorageHistory:
         return safe_path(self.root, self.profile.evidence_root + ("/" + suffix if suffix else ""))
 
     def settings(self):
-        path = safe_path(self.root, self.profile.data_root + "/scheduler/storage.json")
+        path = safe_path(self.profile.definitions_root, self.profile.data_root + "/scheduler/storage.json")
         if not path.exists():
             return {"keep_successful": 100, "automatic_success_retention": True}
         data = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -48,7 +48,7 @@ class StorageHistory:
         return data
 
     def save_settings(self, data):
-        atomic_json(safe_path(self.root, self.profile.data_root + "/scheduler/storage.json"), self.validate_settings(data))
+        atomic_json(safe_path(self.profile.definitions_root, self.profile.data_root + "/scheduler/storage.json"), self.validate_settings(data))
         # Changing settings never triggers deletion of existing evidence.
         return data
 
@@ -281,7 +281,7 @@ class StorageHistory:
     def scan(self):
         # No follow of junctions; these figures describe this profile's managed trees.
         groups = {"module_tests": self.usage(self.path()),
-                  "definitions_presets_scheduler": self.usage(safe_path(self.root, self.profile.data_root))}
+                  "definitions_presets_scheduler": self.usage(safe_path(self.profile.definitions_root, self.profile.data_root))}
         if self.profile.preview_root:
             analysis = safe_path(self.root, self.profile.preview_root)
             previews = {"bytes": 0, "sessions": 0, "skipped": 0}

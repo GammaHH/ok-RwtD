@@ -161,7 +161,8 @@ def select_database(path, count, stage, before=None, version_filter=None, import
 
 def activity_catalog(root, store):
     """Discover current and historical activities without hard-coded event IDs."""
-    registry = root/'assets/rwtd/scheduler/canvases.json'
+    from src.rwtd.android_core.user_data import definition_root
+    registry = definition_root(root)/'assets/rwtd/scheduler/canvases.json'
     entries = json.loads(registry.read_text(encoding='utf-8-sig')).get('entries',{}) if registry.exists() else {}
     known = {}
     for row in store.rows(None,scope='activity'):
@@ -230,7 +231,8 @@ def main(argv=None, *, quiet=False):
         if args.database:
             names.extend(row['canvas'] for row in RoundTimingStore(Path(args.database).resolve()).rows(
                 args.stage,scope=args.scope,canvas_id=args.activity_canvas or None))
-        registry = root/'assets/rwtd/scheduler/canvases.json'
+        from src.rwtd.android_core.user_data import definition_root
+        registry = definition_root(root)/'assets/rwtd/scheduler/canvases.json'
         if registry.exists():
             names.extend(item.get('name','') for key,item in json.loads(registry.read_text(encoding='utf-8-sig')).get('entries',{}).items()
                          if args.scope=='farm' or key==args.activity_canvas)

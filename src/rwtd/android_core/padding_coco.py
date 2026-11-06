@@ -7,13 +7,15 @@ import unicodedata
 from types import SimpleNamespace
 from .workflow_model import TAG_ID,validate_roi,select_targets,TargetNotFound
 from .canvas_entry_guard import coco_allowed
-from .step_conditions import ConditionUnknown
+from .step_conditions import ConditionUnknown, combine
 
 
 FIELDS={'a_tag','b_tag','a_roi','b_roi','check_feature','check_threshold','padding_y','match',
         'offset_x','offset_y','check_width','check_height','selection_mode','selection_index',
         'check_kind','check_text','check_text_match','check_op','check_value',
-        'region_priority','region_fallback','percent_fallback'}
+        'region_priority','region_fallback','percent_fallback','b_filters'}
+FILTER_FIELDS={'check_kind','check_feature','check_threshold','match','check_text','check_text_match',
+               'check_op','check_value'}
 COMPARISONS={'eq':operator.eq,'ne':operator.ne,'gt':operator.gt,'gte':operator.ge,
              'lt':operator.lt,'lte':operator.le}
 
@@ -74,6 +76,17 @@ def validate(row,allowed):
     if kind=='percent' and (type(row.get('percent_fallback',False)) is not bool
                             or row.get('percent_fallback') and row.get('selection_mode','paired')!='paired'):
         raise ValueError('PADDING percent fallback requires A/B pairing')
+    filters=row.get('b_filters',[])
+    if (not isinstance(filters,list) or len(filters)>8
+            or filters and row.get('selection_mode','paired')!='paired'):
+        raise ValueError('PADDING supports up to eight extra B filters in A/B pairing mode')
+    for extra in filters:
+        if (not isinstance(extra,dict) or set(extra)-FILTER_FIELDS-{'join'}
+                or extra.get('join','AND') not in ('AND','OR')
+                or extra.get('check_kind','coco') not in ('coco','ocr','number','percent')):
+            raise ValueError('Invalid PADDING B filter')
+        geometry={key:row[key] for key in ('a_tag','a_roi','b_tag','b_roi') if key in row}
+        validate(dict(geometry,**{key:value for key,value in extra.items() if key!='join'}),allowed)
 
 
 def resolve(row,module):
@@ -145,6 +158,33 @@ def read_b_ocr(task,frame,row,band):
             'ocr_tokens':inside,'value':number}
 
 
+def scan_b_coco(task,frame,row,roi):
+    check={'feature':row['check_feature'],'threshold':row.get('check_threshold',.8),'match':'detected'}
+    checks=task.detect_manual_features(frame,[check['feature']],check['threshold'],coco_roi=roi)
+    if coco_allowed(checks,check) is None:
+        return checks,None
+    scored=[]
+    for hit in checks:
+        if hit.get('feature')==check['feature'] and hit.get('matched') and hit.get('confidence',0)>=check['threshold']:
+            validate_roi(hit.get('bbox'))
+            scored.append(hit)
+    return checks,scored
+
+
+def check_b_band(task,frame,check,band,scored):
+    if check.get('check_kind','coco')!='coco':
+        observation=read_b_ocr(task,frame,check,band)
+        return observation,observation['detected']
+    if scored is None:
+        return {'detected':None,'matches':[],'reason':'B COCO recognition unavailable'},None
+    left,top,width,height=band
+    paired=[hit for hit in scored if left<=hit['bbox'][0]+hit['bbox'][2]/2<left+width
+            and top<=hit['bbox'][1]+hit['bbox'][3]/2<top+height]
+    detected=bool(paired)
+    accepted=detected if check.get('match','disappeared')=='detected' else not detected
+    return {'detected':detected,'matches':paired},accepted
+
+
 def evaluate(task,frame,row):
     a,b=row['a_roi'],row['b_roi'];threshold=row.get('threshold',.8)
     matches=task.detect_manual_features(frame,row['features'],threshold,coco_roi=a)
@@ -174,15 +214,15 @@ def evaluate(task,frame,row):
     kind=row.get('check_kind','coco')
     if (kind=='region' and row.get('region_fallback')) or (kind=='percent' and row.get('percent_fallback')):
         evidence['fallback_anchors']=copy.deepcopy(anchors)
-    scored=[]
+    filters=row.get('b_filters',[])
+    scans={}
+    for check in [row,*filters]:
+        if check.get('check_kind','coco')=='coco':
+            key=(check['check_feature'],check.get('check_threshold',.8))
+            if key not in scans:
+                scans[key]=scan_b_coco(task,frame,check,b)
     if kind=='coco':
-        check={'feature':row['check_feature'],'threshold':row.get('check_threshold',.8),'match':'detected'}
-        checks=task.detect_manual_features(frame,[check['feature']],check['threshold'],coco_roi=b)
-        evidence['check_detections']=checks
-        if coco_allowed(checks,check) is None:raise ConditionUnknown('PADDING COCO B recognition unavailable')
-        for hit in checks:
-            if hit.get('feature')!=check['feature'] or not hit.get('matched') or hit.get('confidence',0)<check['threshold']:continue
-            validate_roi(hit.get('bbox'));scored.append(hit)
+        evidence['check_detections']=scans[(row['check_feature'],row.get('check_threshold',.8))][0]
     modern=any(k in row for k in ('offset_x','offset_y','check_width','check_height'))
     retained=[];pad=0 if modern else row.get('padding_y',10)
     for anchor in anchors:
@@ -194,22 +234,31 @@ def evaluate(task,frame,row):
         bottom=min(b[1]+b[3],raw_top+row.get('check_height',h)+pad)
         if bottom<=top or right<=left:raise ConditionUnknown('PADDING COCO mapped check ROI outside B TAG')
         band=[left,top,right-left,bottom-top]
-        paired=[hit for hit in scored if left<=hit['bbox'][0]+hit['bbox'][2]/2<right
-                and top<=hit['bbox'][1]+hit['bbox'][3]/2<bottom]
-        observation={'detected':bool(paired)} if kind=='coco' else read_b_ocr(task,frame,row,band)
+        def observe(check):
+            key=(check.get('check_feature'),check.get('check_threshold',.8))
+            return check_b_band(task,frame,check,band,scans.get(key,(None,None))[1])
+        observation,accepted=observe(row)
+        filter_results=[]
+        for extra in filters:
+            detail,matched=observe(extra)
+            accepted=combine(accepted,matched,extra.get('join','AND'))
+            filter_results.append(dict(detail,check=extra,result=matched))
         detected=observation['detected']
-        accepted=(not detected if row.get('match','disappeared')=='disappeared' else detected) if kind=='coco' else detected is True
         evidence['candidates'].append({'anchor_bbox':anchor['bbox'],'anchor_feature':anchor.get('feature'),'b_band':band,
-            'accepted':accepted,'matches':paired,
+            'accepted':accepted is True,'matches':[],'filter_results':filter_results,'combined_result':accepted,
             'reason':'B condition matched' if detected else 'B condition unavailable' if detected is None else 'B condition not matched',
             **observation})
         if accepted:
             hit=copy.deepcopy(anchor)
             if kind=='region':hit['region_rank']=observation['region_rank']
             retained.append(hit)
-    if any(candidate['detected'] is None for candidate in evidence['candidates']):
+    filters_unknown=any(result['result'] is None for candidate in evidence['candidates']
+                        for result in candidate['filter_results'])
+    if filters_unknown:
+        evidence.pop('fallback_anchors',None)
+    if any(candidate['combined_result'] is None for candidate in evidence['candidates']):
         evidence['reason']='At least one PADDING B condition is UNKNOWN'
-        if kind=='percent' and row.get('percent_fallback') and retained:
+        if kind=='percent' and row.get('percent_fallback') and retained and not filters_unknown:
             return retained,True,evidence
         for candidate in evidence['candidates']:
             candidate['accepted']=False
@@ -229,6 +278,9 @@ def preview(payload):
         raise ValueError('Invalid padding preview row or detections')
     from .target_conditions import validate as validate_targets
     allowed=set(row.get('features',[]))|{row.get('check_feature')}
+    if isinstance(row.get('b_filters'),list):
+        allowed.update(item['check_feature'] for item in row['b_filters']
+                       if isinstance(item,dict) and isinstance(item.get('check_feature'),str))
     validate_targets({'name':'TapTest','target_conditions':{'evaluation':'left_to_right',
         'position_policy':'source','position_source':0,'clauses':[row]}},allowed,preview=True)
     for hit in matches:
@@ -274,9 +326,12 @@ def preview_image(payload,recognize):
         raise ValueError('Invalid pairing preview image or id')
     from .target_conditions import validate as validate_targets
     if not isinstance(row,dict) or row.get('type')!='padding_coco':raise ValueError('Invalid padding row')
+    allowed=set(row.get('features',[]))|{row.get('check_feature')}
+    if isinstance(row.get('b_filters'),list):
+        allowed.update(item['check_feature'] for item in row['b_filters']
+                       if isinstance(item,dict) and isinstance(item.get('check_feature'),str))
     validate_targets({'name':'TapTest','target_conditions':{'evaluation':'left_to_right',
-        'position_policy':'source','position_source':0,'clauses':[row]}},
-        set(row.get('features',[]))|{row.get('check_feature')},preview=True)
+        'position_policy':'source','position_source':0,'clauses':[row]}},allowed,preview=True)
     raw=base64.b64decode(encoded,validate=True)
     if len(raw)<24 or raw[:8]!=b'\x89PNG\r\n\x1a\n':raise ValueError('Preview requires PNG pixels')
     width,height=struct.unpack('>II',raw[16:24])

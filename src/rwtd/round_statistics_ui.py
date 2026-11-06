@@ -7,13 +7,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .android_core.round_timing_store import RoundTimingStore, full_version, version_parts
+from .android_core.user_data import definition_root, timing_db_path
 from .round_statistics import activity_catalog, main
 
 
 class RoundStatisticsEditor:
     def __init__(self, root):
         self.root = Path(root)
-        self.store = RoundTimingStore(self.root/'assets/rwtd/runtime/farm_round_timings.sqlite3')
+        self.store = RoundTimingStore(timing_db_path(self.root))
         self.jobs = queue.Queue(maxsize=4)
         self.closing = threading.Event()
         self.lock = threading.RLock()
@@ -25,7 +26,7 @@ class RoundStatisticsEditor:
 
     def refresh(self):
         activities = activity_catalog(self.root, self.store)
-        registry = self.root/'assets/rwtd/scheduler/canvases.json'
+        registry = definition_root(self.root)/'assets/rwtd/scheduler/canvases.json'
         entries = json.loads(registry.read_text(encoding='utf-8-sig')).get('entries', {}) if registry.exists() else {}
         names = [dict(canvas=item.get('name',''),stage=None,scope='farm',canvas_id=key) for key,item in entries.items()]
         from .android_core.retreatable_km import stage_from_name

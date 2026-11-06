@@ -1585,7 +1585,7 @@ class ManualDeviceTests:
         if (record["module"] not in TEST_NAMES or not record.get("action_completed") or record["failure_reason"]
                 or (not screenshots_omitted(record) and (not record.get('after') or not Path(record['after']).is_file()))):
             raise ValueError("Only verified completed tests with valid evidence policy can become parameter presets")
-        output = safe_path(self.root, self.profile.data_root + "/presets")
+        output = safe_path(self.profile.definitions_root, self.profile.data_root + "/presets")
         output.mkdir(parents=True, exist_ok=True)
         path = output / ("preset_" + record["report_id"] + "_" + uuid.uuid4().hex[:8] + ".json")
         atomic_json(path, {"name": str(payload.get("name", "Swipe preset"))[:80], "parameters": record["parameters"],

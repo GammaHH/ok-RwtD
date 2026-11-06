@@ -57,7 +57,8 @@ class RoiOverview:
 
     def overrides(self):
         output = []
-        locations = list(self.root.glob('assets/rwtd/modules/system/*.json')) + list(self.root.glob('assets/rwtd/modules/user/*.json'))
+        definitions = self.modules.profile.definitions_root
+        locations = list(definitions.glob('assets/rwtd/modules/system/*.json')) + list(definitions.glob('assets/rwtd/modules/user/*.json'))
         canvas_names = {}
         for entry in self.graphs.catalog():
             store = DecisionGraphStore(self.modules.profile, self.modules, entry['id'])
@@ -66,7 +67,7 @@ class RoiOverview:
                 locations.append(path)
                 canvas_names[path] = entry['name']
         for path in locations:
-            path = safe_path(self.root, str(path.relative_to(self.root)))
+            path = safe_path(definitions, path.relative_to(definitions))
             data = json.loads(path.read_text(encoding='utf-8-sig'))
             features = sorted({item['feature'] for item in self.catalog})
             stamp = digest(path)
@@ -83,13 +84,13 @@ class RoiOverview:
                             # Fixed OCR regions aren't COCO search overrides.
                             if value.get('kind') == 'ocr' and value.get('ocr_region') != 'coco':
                                 continue
-                            output.append({'source': str(path.relative_to(self.root)), 'pointer': list(pointer+(key,)),
+                            output.append({'source': str(path.relative_to(definitions)), 'pointer': list(pointer+(key,)),
                                 'roi': child, 'features': list(hints), 'stamp': stamp,
                                 'system': '/system/' in path.as_posix(),
                                 'owner': owner + ' / ' + '/'.join(map(str, pointer+(key,)))})
                         elif key in {'feature_rois', 'coco_feature_rois'} and isinstance(child, dict):
                             for feature, roi in child.items():
-                                output.append({'source': str(path.relative_to(self.root)), 'pointer': list(pointer+(key,feature)),
+                                output.append({'source': str(path.relative_to(definitions)), 'pointer': list(pointer+(key,feature)),
                                     'roi': roi, 'features': [feature], 'stamp': stamp, 'system': '/system/' in path.as_posix(),
                                     'owner': owner + ' / ' + '/'.join(map(str, pointer+(key,feature)))})
                         else:
@@ -274,7 +275,7 @@ class RoiOverview:
                 raise ValueError('Override changed; reload before saving')
             from src.rwtd.android_core.workflow_model import validate_roi
             roi = validate_roi(payload['roi'])
-            path = safe_path(self.root, source)
+            path = safe_path(self.modules.profile.definitions_root, source)
             data = json.loads(path.read_text(encoding='utf-8-sig'))
             parent = data
             for key in pointer[:-1]:

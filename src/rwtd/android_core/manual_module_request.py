@@ -37,7 +37,8 @@ class ManualModuleRequest:
             request_id=request['id']
             identifier(request['module'])
             module=task.manual.store.get(request['module'])
-            path=safe_path(self.root,f"assets/rwtd/modules/{module['kind']}/{module['id']}.json")
+            from .user_data import definition_root
+            path=safe_path(definition_root(self.root),f"assets/rwtd/modules/{module['kind']}/{module['id']}.json")
             if hashlib.sha256(path.read_bytes()).hexdigest()!=request['module_file_sha256']:
                 raise ValueError('Requested module changed; request not executed')
             if task.controller.device_stop.is_set() or task.exit_is_set():

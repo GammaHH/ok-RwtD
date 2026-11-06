@@ -7,8 +7,8 @@ from .workflow_model import validate_roi
 
 class ModuleDisplayMapping:
     def __init__(self,root):
-        from pathlib import Path
-        path=Path(root)/'assets/rwtd/scheduler/module_display_mapping.json'
+        from .user_data import definition_root
+        path=definition_root(root)/'assets/rwtd/scheduler/module_display_mapping.json'
         data=json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else {
             'schema_version':1,'profiles':{}}
         if set(data)!={'schema_version','profiles'} or data['schema_version']!=1 or not isinstance(data['profiles'],dict):

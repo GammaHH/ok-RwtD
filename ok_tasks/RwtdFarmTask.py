@@ -169,7 +169,8 @@ class RwtdFarmTask(RwtdControlDashboardTask):
             row['details'] = dict(event.get('details', {}), start_utc=event['start_utc'],
                                   end_utc=event['end_utc'], activity_id=event.get('activity_id'),
                                   repetition=event.get('repetition'))
-            RoundTimingStore(self.root/'assets/rwtd/runtime/farm_round_timings.sqlite3').append(row)
+            from src.rwtd.android_core.user_data import timing_db_path
+            RoundTimingStore(timing_db_path(self.root)).append(row)
         except Exception as exc:
             self.log_warning('RWTD_ROUND_STORE_FAILED '+type(exc).__name__+': '+str(exc))
             self.info_set('Round statistics', '寫入失敗；請查看 RWTD_ROUND_STORE_FAILED')
