@@ -6,7 +6,7 @@
     ],
     "last_edit_resolution": [
       1080,
-      2400
+      2340
     ],
     "corrections": [
       "old_phone_y_plus_50_v1"
@@ -15,7 +15,7 @@
   "schema_version": 1,
   "id": "expedition_again",
   "name": "再次遠征",
-  "version": 65,
+  "version": 68,
   "steps": [
     {
       "verification_policy": "manual",
@@ -284,7 +284,8 @@
       "duration_ms": 50,
       "repeat_count": 1,
       "unknown_no_retry": true,
-      "target_policy": "first_bottom_to_top",
+      "target_policy": "first_top_to_bottom",
+      "roi_tag": "gem",
       "target_conditions": {
         "evaluation": "left_to_right",
         "position_policy": "source",
@@ -294,16 +295,26 @@
             "type": "padding_coco",
             "a_tag": "gem2",
             "b_tag": "gem",
-            "check_feature": "no_gem",
             "check_threshold": 0.8,
-            "match": "disappeared",
             "threshold": 0.8,
             "features": [
               "expedition_icon"
             ],
-            "offset_x": 0,
-            "offset_y": -80,
-            "check_height": 150
+            "offset_x": 80,
+            "offset_y": -50,
+            "check_height": 150,
+            "check_kind": "percent",
+            "check_op": "lt",
+            "check_value": 100,
+            "b_filters": [
+              {
+                "join": "AND",
+                "check_kind": "coco",
+                "check_feature": "no_gem",
+                "match": "disappeared"
+              }
+            ],
+            "check_width": 170
           }
         ]
       }
@@ -379,10 +390,10 @@
     "gem": {
       "name": "gem",
       "roi": [
-        646,
-        990,
-        153,
-        1042
+        523,
+        984,
+        276,
+        1048
       ]
     },
     "gem2": {
@@ -400,6 +411,5 @@
     582,
     1080,
     1487
-  ],
-  "revision": "b5bd831ab76c73732a654578409033ffba0ab0253ba6f699012f32993287ae7e"
+  ]
 }

@@ -105,7 +105,8 @@ _✨ Rogue with the Dead 視覺化自動化工具｜讓每一步決策都由你�
 ## Canvas 下載
 
 - [亡途第一關V2.6.5](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/decision.json)
-- [亡途第三關V1.6.1_newest](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_2c79ed548e63429194ce162529ba92ca.json)
+- [亡途第三關V1.6.2](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_2c79ed548e63429194ce162529ba92ca.json)
+  - [再次遠征模組 JSON](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/modules/user/expedition_again.json)
 - [亡途第四關V1.6.9](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_88e97997de90421fa51b14a6e9a657f2.json)
 - [亡途第二關V1.6.4](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_641e5cc1189d4b19979097aeae75b319.json)
 - [亡途第五關V1.8](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_d931bc96c5004aff9ef660852ef3192b.json)

@@ -372,8 +372,9 @@
       "kind": "start",
       "name": "開始",
       "task_type": "TriggerTask",
-      "trigger_interval": 30,
-      "enabled": true
+      "trigger_interval": 0,
+      "enabled": true,
+      "preempt_operations": false
     },
     {
       "id": "Node57",
@@ -1551,10 +1552,10 @@
       }
     },
     "viewport": {
-      "x": -998.5314913623324,
-      "y": -1056.6478679485579,
+      "x": -570.775178515195,
+      "y": -1432.6669643230696,
       "zoom": 0.9189945972714455
     }
   },
-  "revision": "4087e420dbcdfccb8b75cb7e510bc8592759383566fdb256536b855acf4de9c4"
+  "revision": "fbd297ef435586c0f773ad7028ed5101e78e569fb5ac54fc211871b32dff90d5"
 }
