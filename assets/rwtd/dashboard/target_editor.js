@@ -14,8 +14,51 @@ window.createTargetConditionEditor=function(onChange){
   const tags=[['','選擇 TAG'],...Object.entries(tagCatalog).map(([id,t])=>[id,t.name+' · '+t.roi.join(', ')])];
   for(const[key,title]of [['a_tag','A TAG：時鐘等可點目標的長條搜尋區'],['b_tag','B TAG：NO GEM 等條件的長條搜尋區']])select(title,tags,row[key],v=>{row[key]=v;delete row[key==='a_tag'?'a_roi':'b_roi'];});
   const features=[['','選擇檢查 Feature'],...Array.from(el('featureSelect').options).filter(o=>o.value&&!o.disabled).map(o=>[o.value,o.text])];
-  select('B 檢查 COCO Feature',features,row.check_feature,v=>row.check_feature=v);
-  select('B 條件（符合才保留 A 的點擊位置）',[['disappeared','不存在：排除有 NO GEM 的列'],['detected','存在：只保留有此圖示的列']],row.match||'disappeared',v=>row.match=v);
+  const kind=row.check_kind||'coco';
+  select('B 辨識類型',[['coco','COCO 圖示'],['ocr','OCR 文字'],['number','OCR 數字'],['percent','OCR 百分比'],['region','OCR 區域優先順序']],kind,v=>{
+   for(const key of ['check_feature','match','check_text','check_text_match','check_op','check_value','region_priority','region_fallback'])delete row[key];
+   row.check_kind=v;
+   if(v==='coco')Object.assign(row,{check_feature:'',match:'disappeared'});
+   if(v==='ocr')Object.assign(row,{check_text:'',check_text_match:'exact'});
+   if(v==='number')row.check_op='gte';
+   if(v==='percent')Object.assign(row,{check_op:'lt',check_value:100});
+   if(v==='region'){
+    Object.assign(row,{region_priority:[],region_fallback:false,selection_mode:'paired'});
+    el('targetPositionPolicy').value='same';
+    el('targetMultiplicity').value='first_top_to_bottom';
+   }
+   render();
+  });
+  if(kind==='coco'){
+   select('B 檢查 COCO Feature',features,row.check_feature,v=>row.check_feature=v);
+   select('B 條件（符合才保留 A 的點擊位置）',[['disappeared','圖示不存在'],['detected','圖示存在']],row.match||'disappeared',v=>row.match=v);
+  }else if(kind==='region'){
+   const namesLabel=document.createElement('label'),names=document.createElement('textarea');
+   namesLabel.textContent='區域名稱（每行一個，由上到下依序嘗試）';
+   names.value=(row.region_priority||[]).join('\n');
+   names.onchange=()=>{row.region_priority=names.value.split('\n').map(v=>v.trim()).filter(Boolean);active=true;onChange();};
+   namesLabel.append(names);host.append(namesLabel);
+   const fallbackLabel=document.createElement('label'),fallback=document.createElement('input');
+   fallback.type='checkbox';fallback.checked=row.region_fallback===true;
+   fallback.onchange=()=>{row.region_fallback=fallback.checked;active=true;onChange();};
+   fallbackLabel.append(fallback,document.createTextNode('無符合區域時，依最上／最下設定點 A 候選（含 NO_GEM）'));
+   host.append(fallbackLabel);
+  }else{
+   const numeric=kind==='number'||kind==='percent',label=document.createElement('label'),input=document.createElement('input');
+   if(numeric){
+    select('B 數值比較',[['eq','='],['ne','≠'],['gt','>'],['gte','≥'],['lt','<'],['lte','≤']],row.check_op||'gte',v=>row.check_op=v);
+    label.textContent=kind==='percent'?'比較百分比（0～100）':'比較數值';input.type='number';input.step='any';input.value=row.check_value??'';
+   }else{
+    select('B 文字比對',[['exact','完全相同'],['contains','包含']],row.check_text_match||'exact',v=>row.check_text_match=v);
+    label.textContent='尋找文字';input.value=row.check_text||'';input.maxLength=200;
+   }
+   input.onchange=()=>{
+    if(numeric){if(input.value==='')delete row.check_value;else row.check_value=input.valueAsNumber;}
+    else row.check_text=input.value;
+    active=true;onChange();
+   };
+   label.append(input);host.append(label);
+  }
   const rectLabel=document.createElement('label'),rectInput=document.createElement('input');rectLabel.textContent='偏移與檢查 ROI（X 偏移,Y 偏移,寬,高）';rectInput.placeholder='+20,-20,54,54';rectInput.value=row.check_width&&row.check_height?[row.offset_x??0,row.offset_y??0,row.check_width,row.check_height].join(','):'';rectInput.onchange=()=>{const values=rectInput.value.split(',').map(v=>v.trim());if(values.length!==4||values.some(v=>!/^[-+]?\d+$/.test(v))){rectInput.setCustomValidity('請輸入四個整數，例如 +20,-20,54,54');rectInput.reportValidity();return;}const[x,y,w,h]=values.map(Number);if(Math.abs(x)>2400||Math.abs(y)>2400||w<1||w>1080||h<1||h>2400){rectInput.setCustomValidity('偏移需在 ±2400，寬 1～1080，高 1～2400');rectInput.reportValidity();return;}rectInput.setCustomValidity('');delete row.padding_y;Object.assign(row,{offset_x:x,offset_y:y,check_width:w,check_height:h});active=true;render();onChange();};rectLabel.append(rectInput);host.append(rectLabel);
   for(const[key,title,min,max,step]of [['check_threshold','B 信心門檻',.5,1,.01],['offset_x','X 偏移量（+ 右／− 左）',-2400,2400,1],['offset_y','Y 偏移量（+ 下／− 上）',-2400,2400,1],['check_width','檢查 ROI 寬度（px）',1,1080,1],['check_height','檢查 ROI 高度（px）',1,2400,1]]){const label=document.createElement('label'),input=document.createElement('input');label.textContent=title;input.type='number';Object.assign(input,{min,max,step,value:row[key]??(key==='check_threshold'?.8:key.startsWith('offset_')?0:'')});input.placeholder=key==='check_width'?'空白沿用 B TAG 寬度':key==='check_height'?'空白沿用 A 目標高度':'';input.onchange=()=>{if(key!=='check_threshold'){delete row.padding_y;row.offset_x??=0;row.offset_y??=0;}if(input.value==='')delete row[key];else row[key]=Number(input.value);active=true;onChange();};label.append(input);host.append(label);}
   if(row.padding_y!==undefined){const legacy=document.createElement('small');legacy.textContent='舊版上下擴張 '+row.padding_y+' px 暫時保留；修改任一偏移／寬高欄位後，改用新的偏移矩形。';host.append(legacy);}
@@ -56,7 +99,9 @@ window.createTargetConditionEditor=function(onChange){
     box(c.anchor_bbox,'#26fa7c',id+' · '+(c.anchor_feature||clause.features.join('|'))+(selected?' · 將點擊':''));
     if(c.b_band)box(c.b_band,'#4da6ff',id+' · 檢查 ROI');
     for(const hit of c.matches||[])box(hit.bbox,'#26fa7c',id+' · '+clause.check_feature);
-    const detail=document.createElement('small');detail.textContent=id+' · '+(c.anchor_feature||clause.features.join('|'))+' ↔ '+clause.check_feature+'：'+(result.bypassed_b?'略過 B／NO_GEM':c.detected?'有命中':'未命中')+' → '+(c.accepted?'保留':'排除');host.append(detail);
+    const bLabel=clause.check_feature||clause.check_text||(clause.check_kind==='region'?'區域名稱':'數字 '+clause.check_op+' '+clause.check_value);
+    const reading=c.ocr_tokens?.map(token=>token.text).filter(Boolean).join(' · ');
+    const detail=document.createElement('small');detail.textContent=id+' · '+(c.anchor_feature||clause.features.join('|'))+' ↔ '+bLabel+'：'+(result.bypassed_b?'略過 B':c.detected===null?'UNKNOWN':c.detected?'有命中':'未命中')+(reading?'（OCR：'+reading+'）':'')+' → '+(c.accepted?'符合':'排除');host.append(detail);
    }
    host.append(svg);
   }catch(error){host.textContent=stage+'失敗：'+error.message;}finally{button.disabled=false;}

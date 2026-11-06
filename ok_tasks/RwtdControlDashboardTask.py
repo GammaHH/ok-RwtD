@@ -1057,7 +1057,7 @@ class RwtdControlDashboardTask(BaseTask):
                 self._read_image,self._search_region,self._preview_geometry)
             def detect(pixels,features,threshold,coco_roi=None):
                 return worker.analyze(pixels,set(features),threshold,coco_roi)
-            try:return evaluate(SimpleNamespace(detect_manual_features=detect),frame,row)
+            try:return evaluate(SimpleNamespace(detect_manual_features=detect,ocr=self.ocr),frame,row)
             finally:worker.close()
         bridge = DashboardBridge(controller, self.root / "assets/rwtd/dashboard", snapshot, image,
                                  padding_recognizer=padding_recognizer)

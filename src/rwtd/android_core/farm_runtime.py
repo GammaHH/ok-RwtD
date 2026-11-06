@@ -39,6 +39,8 @@ class FarmRuntime:
         self.external_watchers, self.keep_watchers = external_watchers, keep_watchers
         self.invalidate_observers = invalidate_observers
         self.round_complete = round_complete
+        from .notification_timing import NotificationTiming
+        self.notification_timing = NotificationTiming()
         self.round_context = copy.deepcopy(round_context or {})
         self.round_runtime_id = uuid.uuid4().hex
         self.round_started_at = self.clock()
@@ -186,6 +188,7 @@ class FarmRuntime:
             self.activity_switch(child)
 
     def _resume_after_activities(self, deferred=False):
+        self.notification_timing.reset()
         self.activity_resume_round = False
         # Inserted activities belong to their own summaries, not the next
         # normal Farm round's elapsed time.
@@ -349,6 +352,7 @@ class FarmRuntime:
         self.next_due = self.clock() + (self.graph['settings'].get('node_handoff_seconds', 1) if handoff else 0)
 
     def stop(self):
+        self.notification_timing.reset()
         if self.activity_child:
             self.activity_child.stop()
             if self.activity:
@@ -593,6 +597,7 @@ class FarmRuntime:
                                  'total_runs':dict(self.schedule.total_runs)}))
                 self.round_started_at = self.clock()
                 self.round_started_utc = datetime.now(timezone.utc)
+                self.notification_timing.reset()
                 self.activity_round_failed_exit = False
                 if getattr(self,'remote_stop_after_round',False):
                     self.stop()

@@ -5,7 +5,7 @@ from .workflow_model import validate_roi,validate_candidates,TargetNotFound
 from .step_conditions import combine,ConditionUnknown
 
 
-def validate(step,allowed):
+def validate(step,allowed,*,preview=False):
     if 'target_conditions' not in step:return
     group=step['target_conditions']
     if (not isinstance(group,dict) or set(group)!={'evaluation','position_policy','position_source','clauses'}
@@ -46,6 +46,16 @@ def validate(step,allowed):
         if row['type']=='ocr' and (not isinstance(row.get('text'),str) or not row['text'].strip() or len(row['text'])>200
               or row.get('match','exact') not in {'exact','contains'}):
             raise ValueError('Target OCR row requires text and exact/contains')
+    priority=[row for row in group['clauses'] if row.get('check_kind')=='region']
+    if priority and not preview:
+        from .target_order import POSITION_POLICIES
+        if (len(priority)!=1 or group['position_policy']!='same'
+                or any(row['type']!='padding_coco' or row.get('selection_mode','paired')!='paired'
+                       or row.get('join','AND')!='AND' for row in group['clauses'])
+                or not any(row.get('check_kind','coco')=='coco' and row.get('match','disappeared')=='disappeared'
+                           for row in group['clauses'])
+                or step.get('target_policy') not in POSITION_POLICIES):
+            raise ValueError('Region priority requires same-position AND pairing, a COCO absence check and top/bottom selection')
 
 
 def same(a,b):
@@ -64,12 +74,16 @@ def positions(rows,policy,source):
             overlap=[]
             for a in hits:
                 for b in row:
+                    if ('region_rank' in a or 'region_rank' in b) and a['bbox']!=b['bbox']:
+                        continue
                     if not same(a,b):continue
                     x,y,w,h=a['bbox'];u,v,s,t=b['bbox']
                     left,top=max(x,u),max(y,v);right,bottom=min(x+w,u+s),min(y+h,v+t)
                     if right>left and bottom>top:
-                        overlap.append(dict(a,bbox=[left,top,right-left,bottom-top],
-                                            confidence=min(a['confidence'],b['confidence'])))
+                        merged=dict(a,bbox=[left,top,right-left,bottom-top],
+                                    confidence=min(a['confidence'],b['confidence']))
+                        if 'region_rank' in b:merged['region_rank']=b['region_rank']
+                        overlap.append(merged)
             hits=overlap
     result=[]
     for hit in hits:
@@ -149,6 +163,15 @@ def evaluate(task,frame,step):
     hits=positions(row_hits,group['position_policy'],group['position_source']) if value is True else []
     report.update(position_count=len(hits),target_policy=step.get('target_policy','single'))
     from .target_order import POSITION_POLICIES,choose
+    if hits and all('region_rank' in hit for hit in hits):
+        rank=min(hit['region_rank'] for hit in hits)
+        hits=[hit for hit in hits if hit['region_rank']==rank]
+        report['selected_region_rank']=rank
+    elif not hits and all(row['result']!='UNKNOWN' for row in rows):
+        fallback=next((row['fallback_anchors'] for row in rows if row.get('fallback_anchors')),None)
+        if fallback and step.get('target_policy') in POSITION_POLICIES:
+            hits=fallback
+            report.update(result='YES',position_count=len(hits),fallback_used=True)
     if step.get('target_policy') in POSITION_POLICIES:hits=choose(hits,step['target_policy'])
     priority=group['clauses'][group['position_source']].get('feature_priority')
     if hits and group['position_policy']=='source' and step.get('target_policy','single')=='single' and priority:

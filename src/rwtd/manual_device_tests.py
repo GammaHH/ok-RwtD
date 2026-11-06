@@ -1293,6 +1293,11 @@ class ManualDeviceTests:
                                         stop,loop_settings=settings)
         if 'records' not in result:
             result=dict(result,records=[dict(result)])
+        # The shared runner receives a resolved Step, so preserve its saved TAG
+        # in the dashboard response along with the effective execution ROI.
+        if selected.get('roi_tag'):
+            result['resolved_tag']=selected['roi_tag']
+            result['resolved_roi']=result.get('parameters',{}).get('coco_roi')
         # Range/remaining control is observable, but no later Step is scheduled
         # by this explicit single-Step request.
         result['single_step_test']=True

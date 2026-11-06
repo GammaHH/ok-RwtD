@@ -1,6 +1,9 @@
 """Pair long A/B ROI strips by Y; return eligible A targets on one frame."""
 import copy
 import math
+import operator
+import re
+import unicodedata
 from types import SimpleNamespace
 from .workflow_model import TAG_ID,validate_roi,select_targets,TargetNotFound
 from .canvas_entry_guard import coco_allowed
@@ -8,7 +11,11 @@ from .step_conditions import ConditionUnknown
 
 
 FIELDS={'a_tag','b_tag','a_roi','b_roi','check_feature','check_threshold','padding_y','match',
-        'offset_x','offset_y','check_width','check_height','selection_mode','selection_index'}
+        'offset_x','offset_y','check_width','check_height','selection_mode','selection_index',
+        'check_kind','check_text','check_text_match','check_op','check_value',
+        'region_priority','region_fallback'}
+COMPARISONS={'eq':operator.eq,'ne':operator.ne,'gt':operator.gt,'gte':operator.ge,
+             'lt':operator.lt,'lte':operator.le}
 
 
 def validate(row,allowed):
@@ -32,12 +39,38 @@ def validate(row,allowed):
             raise ValueError('PADDING COCO requires module-local A/B TAGs')
         if roi in row:validate_roi(row[roi])
     score=row.get('check_threshold',.8)
-    if (not isinstance(row.get('check_feature'),str) or row['check_feature'] not in allowed
-            or type(score) not in (int,float) or not .5<=score<=1
+    if (type(score) not in (int,float) or not .5<=score<=1
             or type(row.get('padding_y',10)) is not int or not 0<=row.get('padding_y',10)<=1200
             or row.get('match','disappeared') not in {'detected','disappeared'}
             or 'roi' in row or 'roi_tag' in row):
         raise ValueError('Invalid PADDING COCO check Feature, threshold, Y padding or match')
+    kind=row.get('check_kind','coco')
+    fields={'coco':{'check_feature','match'},'ocr':{'check_text','check_text_match'},
+            'number':{'check_op','check_value'},'percent':{'check_op','check_value'},
+            'region':{'region_priority','region_fallback'}}
+    if (not isinstance(kind,str) or kind not in fields
+            or (set(row) & set().union(*fields.values())) - fields[kind]):
+        raise ValueError('PADDING B fields must match the selected recognition type')
+    if kind=='coco' and (not isinstance(row.get('check_feature'),str) or row['check_feature'] not in allowed):
+        raise ValueError('Invalid PADDING B Feature')
+    if kind=='ocr' and (not isinstance(row.get('check_text'),str) or not row['check_text'].strip()
+                        or len(row['check_text'])>200 or row.get('check_text_match','exact') not in {'exact','contains'}):
+        raise ValueError('PADDING B OCR requires text and an exact/contains match')
+    if kind in {'number','percent'}:
+        value=row.get('check_value')
+        lower,upper=(0,100) if kind=='percent' else (-1e15,1e15)
+        if (not isinstance(row.get('check_op'),str) or row['check_op'] not in COMPARISONS
+                or type(value) not in (int,float)
+                or not lower<=value<=upper):
+            raise ValueError(f'PADDING B requires a comparison and a finite value within {lower}..{upper}')
+    if kind=='region':
+        names=row.get('region_priority')
+        if (not isinstance(names,list) or not 1<=len(names)<=30
+                or any(not isinstance(name,str) or not name.strip() or len(name)>200 for name in names)
+                or len({name.strip() for name in names})!=len(names)
+                or type(row.get('region_fallback',False)) is not bool
+                or row.get('selection_mode','paired')!='paired'):
+            raise ValueError('PADDING region priority requires unique names and A/B pairing')
 
 
 def resolve(row,module):
@@ -46,6 +79,66 @@ def resolve(row,module):
         if name is not None:
             if name not in module.get('tags',{}):raise ValueError('Missing PADDING COCO TAG: '+name)
             row[roi]=list(module['tags'][name]['roi'])
+
+
+def read_b_ocr(task,frame,row,band):
+    from ok import Box
+    from .ocr_records import box_tokens
+    from .canvas_entry_guard import ocr_allowed
+
+    threshold=row.get('check_threshold',.8)
+    try:
+        boxes=task.ocr(box=Box(*band),frame=frame,threshold=threshold)
+    except Exception as exc:
+        return {'detected':None,'ocr_tokens':[],'reason':'B OCR failed: '+type(exc).__name__}
+    if boxes is None:
+        return {'detected':None,'ocr_tokens':[],'reason':'B OCR unavailable'}
+    tokens=box_tokens(boxes)
+    x,y,w,h=band
+    if any('bbox' not in token for token in tokens):
+        return {'detected':None,'ocr_tokens':tokens,'reason':'B OCR coordinates unavailable'}
+    inside=[]
+    for token in tokens:
+        try:
+            tx,ty,tw,th=validate_roi(token['bbox'])
+        except ValueError:
+            return {'detected':None,'ocr_tokens':tokens,'reason':'Invalid B OCR coordinates'}
+        if x<=tx and y<=ty and tx+tw<=x+w and ty+th<=y+h:
+            inside.append(token)
+    if row['check_kind']=='ocr':
+        detected=ocr_allowed(inside,{'text':row['check_text'].strip(),
+            'threshold':threshold,'match':row.get('check_text_match','exact')})
+        return {'detected':detected,'ocr_tokens':inside}
+    if row['check_kind']=='region':
+        if ocr_allowed(inside,{'text':'','threshold':threshold,'match':'exact'}) is None:
+            return {'detected':None,'ocr_tokens':inside,'reason':'Invalid B OCR result'}
+        names={token['text'].strip() for token in inside if token['confidence']>=threshold}
+        ranks=[rank for rank,name in enumerate(row['region_priority']) if name.strip() in names]
+        if len(ranks)>1:
+            return {'detected':None,'ocr_tokens':inside,'reason':'More than one region name matched'}
+        return {'detected':bool(ranks),'ocr_tokens':inside,
+                'region_rank':ranks[0] if ranks else None}
+
+    # Require one complete numeric token. Never extract a substring or default to zero.
+    percent=row['check_kind']=='percent'
+    pattern=r'([0-9]+(?:\.[0-9]+)?)\s*%' if percent else r'([+-]?[0-9]+(?:\.[0-9]+)?)'
+    lower,upper=(0,100) if percent else (-1e15,1e15)
+    numbers=[]
+    for token in inside:
+        score=token['confidence']
+        value=token['text']
+        if not isinstance(value,str) or score is None or not threshold<=score<=1:
+            continue
+        value=unicodedata.normalize('NFKC',value).strip()
+        match=re.fullmatch(pattern,value)
+        if match:
+            number=float(match[1])
+            if lower<=number<=upper:numbers.append(number)
+    if len(numbers)!=1:
+        return {'detected':None,'ocr_tokens':inside,'reason':'B OCR needs exactly one valid number'}
+    number=numbers[0]
+    return {'detected':COMPARISONS[row['check_op']](number,row['check_value']),
+            'ocr_tokens':inside,'value':number}
 
 
 def evaluate(task,frame,row):
@@ -74,14 +167,18 @@ def evaluate(task,frame,row):
                                      'accepted':i==index,'reason':'B bypassed by indexed selection'}
                                     for i,a in enumerate(anchors)])
         return [chosen],True,evidence
-    check={'feature':row['check_feature'],'threshold':row.get('check_threshold',.8),'match':'detected'}
-    checks=task.detect_manual_features(frame,[check['feature']],check['threshold'],coco_roi=b)
-    evidence['check_detections']=checks
-    if coco_allowed(checks,check) is None:raise ConditionUnknown('PADDING COCO B recognition unavailable')
+    kind=row.get('check_kind','coco')
+    if kind=='region' and row.get('region_fallback'):
+        evidence['fallback_anchors']=copy.deepcopy(anchors)
     scored=[]
-    for hit in checks:
-        if hit.get('feature')!=check['feature'] or not hit.get('matched') or hit.get('confidence',0)<check['threshold']:continue
-        validate_roi(hit.get('bbox'));scored.append(hit)
+    if kind=='coco':
+        check={'feature':row['check_feature'],'threshold':row.get('check_threshold',.8),'match':'detected'}
+        checks=task.detect_manual_features(frame,[check['feature']],check['threshold'],coco_roi=b)
+        evidence['check_detections']=checks
+        if coco_allowed(checks,check) is None:raise ConditionUnknown('PADDING COCO B recognition unavailable')
+        for hit in checks:
+            if hit.get('feature')!=check['feature'] or not hit.get('matched') or hit.get('confidence',0)<check['threshold']:continue
+            validate_roi(hit.get('bbox'));scored.append(hit)
     modern=any(k in row for k in ('offset_x','offset_y','check_width','check_height'))
     retained=[];pad=0 if modern else row.get('padding_y',10)
     for anchor in anchors:
@@ -95,12 +192,22 @@ def evaluate(task,frame,row):
         band=[left,top,right-left,bottom-top]
         paired=[hit for hit in scored if left<=hit['bbox'][0]+hit['bbox'][2]/2<right
                 and top<=hit['bbox'][1]+hit['bbox'][3]/2<bottom]
-        detected=bool(paired)
-        accepted=detected if row.get('match','disappeared')=='detected' else not detected
+        observation={'detected':bool(paired)} if kind=='coco' else read_b_ocr(task,frame,row,band)
+        detected=observation['detected']
+        accepted=(not detected if row.get('match','disappeared')=='disappeared' else detected) if kind=='coco' else detected is True
         evidence['candidates'].append({'anchor_bbox':anchor['bbox'],'anchor_feature':anchor.get('feature'),'b_band':band,
-            'detected':detected,'accepted':accepted,'matches':paired,
-            'reason':'B condition matched' if detected else 'B condition absent'})
-        if accepted:retained.append(copy.deepcopy(anchor))
+            'accepted':accepted,'matches':paired,
+            'reason':'B condition matched' if detected else 'B condition unavailable' if detected is None else 'B condition not matched',
+            **observation})
+        if accepted:
+            hit=copy.deepcopy(anchor)
+            if kind=='region':hit['region_rank']=observation['region_rank']
+            retained.append(hit)
+    if any(candidate['detected'] is None for candidate in evidence['candidates']):
+        evidence['reason']='At least one PADDING B condition is UNKNOWN'
+        for candidate in evidence['candidates']:
+            candidate['accepted']=False
+        return [],None,evidence
     return retained,bool(retained),evidence
 
 
@@ -117,7 +224,7 @@ def preview(payload):
     from .target_conditions import validate as validate_targets
     allowed=set(row.get('features',[]))|{row.get('check_feature')}
     validate_targets({'name':'TapTest','target_conditions':{'evaluation':'left_to_right',
-        'position_policy':'source','position_source':0,'clauses':[row]}},allowed)
+        'position_policy':'source','position_source':0,'clauses':[row]}},allowed,preview=True)
     for hit in matches:
         if not isinstance(hit,dict) or not isinstance(hit.get('feature'),str):
             raise ValueError('Invalid preview detection')
@@ -142,9 +249,9 @@ def preview(payload):
         return result
     try:
         hits,state,evidence=evaluate(SimpleNamespace(detect_manual_features=detect),None,row)
-        return dict(evidence,result='YES' if state else 'NO',frame_id=frame_id,
+        return dict(evidence,result='UNKNOWN' if state is None else 'YES' if state else 'NO',frame_id=frame_id,
                     retained=hits,selected=hits[:1],device_inputs=0,preview_only=True)
-    except (ValueError,TypeError,KeyError) as exc:
+    except (ValueError,TypeError,KeyError,AttributeError) as exc:
         return {'result':'UNKNOWN','reason':str(exc)[:300],'frame_id':frame_id,
                 'candidates':[],'retained':[],'selected':[],'device_inputs':0,'preview_only':True}
 
@@ -163,7 +270,7 @@ def preview_image(payload,recognize):
     if not isinstance(row,dict) or row.get('type')!='padding_coco':raise ValueError('Invalid padding row')
     validate_targets({'name':'TapTest','target_conditions':{'evaluation':'left_to_right',
         'position_policy':'source','position_source':0,'clauses':[row]}},
-        set(row.get('features',[]))|{row.get('check_feature')})
+        set(row.get('features',[]))|{row.get('check_feature')},preview=True)
     raw=base64.b64decode(encoded,validate=True)
     if len(raw)<24 or raw[:8]!=b'\x89PNG\r\n\x1a\n':raise ValueError('Preview requires PNG pixels')
     width,height=struct.unpack('>II',raw[16:24])
@@ -179,7 +286,7 @@ def preview_image(payload,recognize):
         normalized=base64.b64encode(png.tobytes()).decode('ascii')
     try:
         hits,state,evidence=recognize(frame,row)
-        return dict(evidence,result='YES' if state else 'NO',retained=hits,selected=hits[:1],
+        return dict(evidence,result='UNKNOWN' if state is None else 'YES' if state else 'NO',retained=hits,selected=hits[:1],
             frame_id=frame_id,device_inputs=0,preview_only=True,normalized_image_png=normalized)
     except (ValueError,TypeError,KeyError) as exc:
         return {'result':'UNKNOWN','reason':str(exc)[:500],'frame_id':frame_id,'candidates':[],

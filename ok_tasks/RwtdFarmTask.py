@@ -153,7 +153,8 @@ class RwtdFarmTask(RwtdControlDashboardTask):
 
     def _save_round_timing(self, event):
         """Persist summaries even when detailed/timing logging is disabled."""
-        if event.get('outcome') != 'SUCCESS':
+        if (event.get('outcome') != 'SUCCESS' or
+                event.get('details', {}).get('timing_basis') != 'notification_nodes'):
             return  # Failure exits remain diagnostic events, not timing samples.
         try:
             from datetime import datetime
@@ -256,6 +257,25 @@ class RwtdFarmTask(RwtdControlDashboardTask):
                                  result.get('action_completed')) if effect_started is not None else None
         return result
 
+    def canvas_effect(self, payload, stop, _observer_token=None):
+        result = super().canvas_effect(payload, stop, _observer_token=_observer_token)
+        farm = getattr(self, 'farm', None)
+        if farm is not None and payload.get('source') == 'android_manual':
+            owner = farm.active_runtime
+            # Notification-to-notification elapsed time includes manual pauses.
+            event = owner.notification_timing.observe(payload['node'], result, time.monotonic())
+            if event is not None:
+                self._save_round_timing(dict(owner.round_context, **event,
+                    runtime_id=owner.round_runtime_id, round=owner.schedule.rounds+1,
+                    revision=owner.graph.get('revision')))
+        return result
+
+    def _send_failure_notification(self, text, png):
+        farm = getattr(self, 'farm', None)
+        if farm is not None:
+            farm.active_runtime.notification_timing.failure()
+        return super()._send_failure_notification(text, png)
+
     def _queued(self, request):
         self._sync_farm()
         if self.controller.device_stop.is_set() or self.exit_is_set():
@@ -280,6 +300,8 @@ class RwtdFarmTask(RwtdControlDashboardTask):
             self.trigger_frames.clear()
 
     def _failure_notice(self, event):
+        if self.config.get('Failure Notifications', True):
+            self.farm.active_runtime.notification_timing.failure()
         if not event.get('evidence_dispatched'):
             self.on_exhaustion(dict(event,kind='chain',source='android_manual',
                 event_id=f"chain:{self._farm_evidence_run}:{self.farm.schedule.rounds}:{event['chain']}:{event.get('failure_count')}",
@@ -457,7 +479,7 @@ class RwtdFarmTask(RwtdControlDashboardTask):
             self.farm = FarmRuntime(graph, modules, self._effect, self._queued, self._failure_notice,
                                     farm_clock, rounds, 'android_manual', permission, self._observe,
                                     external_watchers=True,
-                                    round_complete=self._save_round_timing,
+                                    round_complete=None,  # SQL samples come only from marked notifications.
                                     round_context={'session':self._farm_evidence_run, 'scope':'farm',
                                                    'canvas_id':chosen['id'], 'canvas':chosen['name']},
                                     time_guards=self.manual.time_guards,

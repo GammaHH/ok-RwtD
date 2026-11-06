@@ -419,6 +419,14 @@
       "module": "hero_death"
     },
     {
+      "id": "ExpeditionTimingStart",
+      "kind": "notify",
+      "name": "遠征計時開始",
+      "message": "遠征流程開始計時",
+      "cooldown_seconds": 1,
+      "round_timing": "start"
+    },
+    {
       "id": "Node19",
       "kind": "module",
       "name": "執行模組",
@@ -470,6 +478,14 @@
       "kind": "module",
       "name": "執行模組",
       "module": "expedition_again"
+    },
+    {
+      "id": "ExpeditionTimingEnd",
+      "kind": "notify",
+      "name": "遠征計時結束",
+      "message": "遠征流程結束計時",
+      "cooldown_seconds": 1,
+      "round_timing": "end"
     },
     {
       "id": "Node57",
@@ -1000,6 +1016,12 @@
       "id": "E56",
       "source": "Node56",
       "port": "NEXT",
+      "target": "ExpeditionTimingEnd"
+    },
+    {
+      "id": "ExpeditionTimingEndNext",
+      "source": "ExpeditionTimingEnd",
+      "port": "NEXT",
       "target": "Node63"
     },
     {
@@ -1024,6 +1046,12 @@
       "id": "E66",
       "source": "Node57",
       "port": "YES",
+      "target": "ExpeditionTimingStart"
+    },
+    {
+      "id": "ExpeditionTimingStartNext",
+      "source": "ExpeditionTimingStart",
+      "port": "NEXT",
       "target": "Node19"
     },
     {
@@ -1366,6 +1394,10 @@
         "x": 283.0270968635872,
         "y": 1530.5325299029987
       },
+      "ExpeditionTimingStart": {
+        "x": 991.7067001243986,
+        "y": 1633.0269543963548
+      },
       "Node19": {
         "x": 733.9238970337433,
         "y": 1633.0269543963548
@@ -1385,6 +1417,10 @@
       "Node57": {
         "x": 991.7067001243986,
         "y": 1897.3342878407536
+      },
+      "ExpeditionTimingEnd": {
+        "x": 445,
+        "y": 2000
       },
       "Node63": {
         "x": 567.803201752155,

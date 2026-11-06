@@ -567,6 +567,10 @@
           "minimum": 1,
           "maximum": 86400
         },
+        "round_timing": {
+          "type": "string",
+          "enum": ["none", "start", "end", "failure"]
+        },
         "seconds": {
           "type": "number",
           "minimum": 0,
