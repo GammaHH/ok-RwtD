@@ -807,6 +807,7 @@
       "kind": "coco",
       "name": "遠征前：重生圖示",
       "feature": "reborn",
+      "roi": [0, 2166, 1080, 234],
       "match": "detected",
       "threshold": 0.8
     }

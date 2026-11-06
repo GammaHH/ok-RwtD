@@ -457,6 +457,7 @@
           {
             "kind": "coco",
             "feature": "reborn",
+            "roi": [0, 2166, 1080, 234],
             "threshold": 0.8,
             "match": "detected"
           },
