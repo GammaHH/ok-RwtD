@@ -227,6 +227,7 @@
     },
     {
       "id": "Node45",
+      "round_timing": "end",
       "kind": "notify",
       "name": "結束通知",
       "message": "一輪結束了",
@@ -234,6 +235,7 @@
     },
     {
       "id": "Node46",
+      "round_timing": "start",
       "kind": "notify",
       "name": "輪數開始",
       "message": "新的一輪開始了",
@@ -424,7 +426,7 @@
       "name": "遠征計時開始",
       "message": "遠征流程開始計時",
       "cooldown_seconds": 1,
-      "round_timing": "start"
+      "round_timing": "none"
     },
     {
       "id": "Node19",
@@ -485,7 +487,7 @@
       "name": "遠征計時結束",
       "message": "遠征流程結束計時",
       "cooldown_seconds": 1,
-      "round_timing": "end"
+      "round_timing": "none"
     },
     {
       "id": "Node57",
