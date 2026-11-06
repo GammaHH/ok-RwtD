@@ -191,7 +191,7 @@
   $('save').onclick=async()=>{
     if(!selection)return;
     const authored=Object.fromEntries([...overrides].map(k=>[k,fields[k]]));
-    if ('mid_x,mid_y' in fields && Object.values(authored).some(row=>row.kind==='point')) {
+    if (selection.can_test_swipe && Object.values(authored).some(row=>row.kind==='point')) {
       for (const [key,row] of Object.entries(fields)) if(row.kind==='point') authored[key]=row;
     }
     await command('save',{revision:state.revision,signature:selection.signature,fields:authored});

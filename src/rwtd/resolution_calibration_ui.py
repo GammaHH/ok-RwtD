@@ -14,7 +14,8 @@ import numpy as np
 
 from .android_core.module_store import ModuleStore, safe_path
 from .android_core.resolution_calibration import (
-    CalibrationStore, POINTS, RELATIVE, geometry_fields, native_fields, step_signature, validate_native,
+    CalibrationStore, POINTS, RELATIVE, geometry_fields, matches_calibration, native_fields,
+    step_signature, validate_native,
 )
 from .android_core.module_display_mapping import ModuleDisplayMapping
 from .android_core.screen_geometry import ScreenGeometry
@@ -93,14 +94,14 @@ class CalibrationEditor:
                              'changed_fields':[],'geometry_count':0,'error':str(exc)[:160]})
                 continue
             mapping_changed = bool(saved and saved['baseline_fields'] != geometry_fields(baseline))
-            status = 'NEW' if not saved else 'VALID' if saved['signature'] == step_signature(resolved) and not mapping_changed else 'CHANGED'
+            status = 'NEW' if not saved else 'VALID' if matches_calibration(saved, resolved, baseline) else 'CHANGED'
             fields = geometry_fields(resolved)
             old = (saved or {}).get('base_fields', {})
             changes = [key for key in sorted(set(fields) | set(old)) if fields.get(key) != old.get(key)] if saved else list(fields)
             rows.append({'step_id': step['step_id'], 'name': step['name'], 'status': status,
                          'changed_fields': changes, 'geometry_count': len(fields),
                          'other_changes': bool(saved and status == 'CHANGED' and not changes),
-                         'mapping_changed': mapping_changed})
+                         'mapping_changed': mapping_changed and status == 'CHANGED'})
         current = {s['step_id'] for s in module['steps']}
         rows.extend({'step_id': sid, 'name': '已刪除的 Step', 'status': 'DELETED',
                      'changed_fields': [], 'geometry_count': 0} for sid in previous if sid not in current)
@@ -177,8 +178,7 @@ class CalibrationEditor:
         defaults = self.baseline_mapping.apply(task, module_id, self.source)
         default_fields = native_fields(defaults, self.geometry, auto_swipe=True)
         saved = self.profiles['profiles'].get(self._size(), {}).get(module_id, {}).get(step_id)
-        valid = (saved and saved['signature'] == step_signature(self.source)
-                 and saved['baseline_fields'] == geometry_fields(defaults))
+        valid = matches_calibration(saved, self.source, defaults)
         calibrated_points = valid and any(row['kind']=='point' for row in saved['fields'].values())
         fields = native_fields(effective, self.geometry, auto_swipe=not calibrated_points)
         # Keep exactly authored physical pixels in the editor (inverse roundoff is runtime-only).

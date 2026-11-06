@@ -69,6 +69,30 @@ def set_field(step, key, values):
     target[parts[-1]] = list(values)
 
 
+def matches_calibration(row, source, baseline):
+    if not row:
+        return False
+    current = geometry_fields(baseline)
+    if row['signature'] == step_signature(source) and row['baseline_fields'] == current:
+        return True
+    if source.get('name') != 'SwipeCalibration' or not any(
+            field['kind'] == 'point' for field in row['fields'].values()):
+        return False
+    # A saved swipe path is specific to this Step and display. Compare the
+    # rest of the definition against the saved version using its old points.
+    keys = {f'{x},{y}' for x, y in POINTS if x in source and y in source}
+    old_points = {key for key, field in row['base_fields'].items() if field.get('kind') == 'point'}
+    if keys != old_points:
+        return False
+    original = dict(source)
+    for key in keys:
+        set_field(original, key, row['base_fields'][key]['value'])
+    old_baseline = row['baseline_fields']
+    return (row['signature'] == step_signature(original)
+            and {key: value for key, value in current.items() if key not in keys}
+            == {key: value for key, value in old_baseline.items() if key not in keys})
+
+
 def native_fields(step, geometry, *, auto_swipe=False):
     if auto_swipe and step.get('name') == 'SwipeCalibration' and 'mid_x' in step:
         step = copy.deepcopy(step)
@@ -222,8 +246,7 @@ class CalibrationStore:
 
     def apply(self, profiles, geometry, module, source, mapped):
         row = profiles.get(f'{geometry.width}x{geometry.height}', {}).get(module, {}).get(str(source.get('step_id')))
-        if (not row or row['signature'] != step_signature(source)
-                or row['baseline_fields'] != geometry_fields(mapped)):
+        if not matches_calibration(row, source, mapped):
             return mapped
         available = geometry_fields(source)
         for key, field in row['fields'].items():
@@ -236,6 +259,5 @@ class CalibrationStore:
 
     def has_points(self, profiles, geometry, module, source, mapped):
         row = profiles.get(f'{geometry.width}x{geometry.height}', {}).get(module, {}).get(str(source.get('step_id')))
-        return bool(row and row['signature'] == step_signature(source) and
-                    row['baseline_fields'] == geometry_fields(mapped) and
+        return bool(matches_calibration(row, source, mapped) and
                     any(field['kind'] == 'point' for field in row['fields'].values()))
