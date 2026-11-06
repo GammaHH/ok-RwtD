@@ -47,6 +47,14 @@ def validate(step,allowed,*,preview=False):
               or row.get('match','exact') not in {'exact','contains'}):
             raise ValueError('Target OCR row requires text and exact/contains')
     priority=[row for row in group['clauses'] if row.get('check_kind')=='region']
+    percent_fallback=[row for row in group['clauses'] if row.get('percent_fallback') is True]
+    if percent_fallback and not preview:
+        from .target_order import POSITION_POLICIES
+        if (len(percent_fallback)!=1 or priority or step.get('target_policy') not in POSITION_POLICIES
+                or len(group['clauses'])>1 and (group['position_policy']!='same'
+                    or any(row['type']!='padding_coco' or row.get('selection_mode','paired')!='paired'
+                           or row.get('join','AND')!='AND' for row in group['clauses']))):
+            raise ValueError('Percent fallback requires top/bottom selection and same-position AND pairing when combined')
     if priority and not preview:
         from .target_order import POSITION_POLICIES
         if (len(priority)!=1 or group['position_policy']!='same'
@@ -167,7 +175,8 @@ def evaluate(task,frame,step):
         rank=min(hit['region_rank'] for hit in hits)
         hits=[hit for hit in hits if hit['region_rank']==rank]
         report['selected_region_rank']=rank
-    elif not hits and all(row['result']!='UNKNOWN' for row in rows):
+    elif not hits and all(row['result']!='UNKNOWN' or row.get('percent_fallback') is True
+                          and row.get('fallback_anchors') for row in rows):
         fallback=next((row['fallback_anchors'] for row in rows if row.get('fallback_anchors')),None)
         if fallback and step.get('target_policy') in POSITION_POLICIES:
             hits=fallback

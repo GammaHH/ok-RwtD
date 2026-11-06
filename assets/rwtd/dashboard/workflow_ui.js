@@ -55,13 +55,17 @@ WorkflowModel.validateTargetConditions=function(step){
  if(!Array.isArray(rows)||!rows.some(r=>r?.type==='padding_coco'))return validateOriginalTargets.call(this,step);
  const converted=structuredClone(step);
  const priority=rows.filter(r=>r?.check_kind==='region');
+ const percentFallback=rows.filter(r=>r?.percent_fallback===true);
+ if(percentFallback.length&&(percentFallback.length!==1||priority.length
+    ||!['first_top_to_bottom','first_bottom_to_top'].includes(step.target_policy)
+    ||rows.length>1&&(step.target_conditions.position_policy!=='same'||rows.some(r=>r?.type!=='padding_coco'||(r.selection_mode??'paired')!=='paired'||(r.join??'AND')!=='AND'))))throw Error('百分比保底需選最上或最下，多列時使用同位置 AND 配對');
  if(priority.length&&(priority.length!==1||step.target_conditions.position_policy!=='same'
     ||rows.some(r=>r?.type!=='padding_coco'||(r.selection_mode??'paired')!=='paired'||(r.join??'AND')!=='AND')
     ||!rows.some(r=>(r.check_kind??'coco')==='coco'&&(r.match??'disappeared')==='disappeared')
     ||!['first_top_to_bottom','first_bottom_to_top'].includes(step.target_policy)))throw Error('區域優先順序需搭配同位置 AND、COCO 圖示不存在，並選擇最上或最下');
  for(const r of converted.target_conditions.clauses){
   if(r?.type!=='padding_coco')continue;
-  const modes={coco:['check_feature','match'],ocr:['check_text','check_text_match'],number:['check_op','check_value'],percent:['check_op','check_value'],region:['region_priority','region_fallback']};
+  const modes={coco:['check_feature','match'],ocr:['check_text','check_text_match'],number:['check_op','check_value'],percent:['check_op','check_value','percent_fallback'],region:['region_priority','region_fallback']};
   const kind=r.check_kind??'coco';
   const fields=['type','join','features','feature_priority','threshold','a_tag','b_tag','a_roi','b_roi','check_kind','check_threshold','padding_y','offset_x','offset_y','check_width','check_height','selection_mode','selection_index',...(Object.hasOwn(modes,kind)?modes[kind]:[])];
   if(!Object.hasOwn(modes,kind))throw Error('PADDING B 辨識類型無效');
@@ -77,6 +81,7 @@ WorkflowModel.validateTargetConditions=function(step){
   if(kind==='ocr'&&(typeof r.check_text!=='string'||!r.check_text.trim()||r.check_text.length>200||!['exact','contains'].includes(r.check_text_match??'exact')))throw Error('請設定 PADDING B 的 OCR 文字');
   if(['number','percent'].includes(kind)&&(!['eq','ne','gt','gte','lt','lte'].includes(r.check_op)||!Number.isFinite(r.check_value)||(kind==='percent'?(r.check_value<0||r.check_value>100):Math.abs(r.check_value)>1e15)))throw Error('請設定 PADDING B 的比較方式與數值（百分比 0～100）');
   if(kind==='region'&&(!Array.isArray(r.region_priority)||r.region_priority.length<1||r.region_priority.length>30||r.region_priority.some(name=>typeof name!=='string'||!name.trim()||name.length>200)||new Set(r.region_priority.map(name=>name.trim())).size!==r.region_priority.length||typeof (r.region_fallback??false)!=='boolean'))throw Error('請輸入 1～30 個不重複的區域名稱');
+  if(kind==='percent'&&(Object.hasOwn(r,'percent_fallback')&&typeof r.percent_fallback!=='boolean'||r.percent_fallback&&(r.selection_mode??'paired')!=='paired'))throw Error('百分比保底需使用 A／B 配對');
   const modern=['offset_x','offset_y','check_width','check_height'];
   if(Object.hasOwn(r,'padding_y')&&modern.some(k=>Object.hasOwn(r,k)))throw Error('舊版上下擴張不可與偏移／寬高混用');
   for(const k of ['offset_x','offset_y'])if(Object.hasOwn(r,k)&&(!Number.isInteger(r[k])||r[k]<-2400||r[k]>2400))throw Error('偏移量需為 -2400～2400 整數');

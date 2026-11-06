@@ -13,7 +13,7 @@ from .step_conditions import ConditionUnknown
 FIELDS={'a_tag','b_tag','a_roi','b_roi','check_feature','check_threshold','padding_y','match',
         'offset_x','offset_y','check_width','check_height','selection_mode','selection_index',
         'check_kind','check_text','check_text_match','check_op','check_value',
-        'region_priority','region_fallback'}
+        'region_priority','region_fallback','percent_fallback'}
 COMPARISONS={'eq':operator.eq,'ne':operator.ne,'gt':operator.gt,'gte':operator.ge,
              'lt':operator.lt,'lte':operator.le}
 
@@ -46,7 +46,7 @@ def validate(row,allowed):
         raise ValueError('Invalid PADDING COCO check Feature, threshold, Y padding or match')
     kind=row.get('check_kind','coco')
     fields={'coco':{'check_feature','match'},'ocr':{'check_text','check_text_match'},
-            'number':{'check_op','check_value'},'percent':{'check_op','check_value'},
+            'number':{'check_op','check_value'},'percent':{'check_op','check_value','percent_fallback'},
             'region':{'region_priority','region_fallback'}}
     if (not isinstance(kind,str) or kind not in fields
             or (set(row) & set().union(*fields.values())) - fields[kind]):
@@ -71,6 +71,9 @@ def validate(row,allowed):
                 or type(row.get('region_fallback',False)) is not bool
                 or row.get('selection_mode','paired')!='paired'):
             raise ValueError('PADDING region priority requires unique names and A/B pairing')
+    if kind=='percent' and (type(row.get('percent_fallback',False)) is not bool
+                            or row.get('percent_fallback') and row.get('selection_mode','paired')!='paired'):
+        raise ValueError('PADDING percent fallback requires A/B pairing')
 
 
 def resolve(row,module):
@@ -121,7 +124,8 @@ def read_b_ocr(task,frame,row,band):
 
     # Require one complete numeric token. Never extract a substring or default to zero.
     percent=row['check_kind']=='percent'
-    pattern=r'([0-9]+(?:\.[0-9]+)?)\s*%' if percent else r'([+-]?[0-9]+(?:\.[0-9]+)?)'
+    # The underlined expedition display can produce one leading OCR underscore.
+    pattern=r'_?\s*([0-9]+(?:\.[0-9]+)?)\s*%' if percent else r'([+-]?[0-9]+(?:\.[0-9]+)?)'
     lower,upper=(0,100) if percent else (-1e15,1e15)
     numbers=[]
     for token in inside:
@@ -168,7 +172,7 @@ def evaluate(task,frame,row):
                                     for i,a in enumerate(anchors)])
         return [chosen],True,evidence
     kind=row.get('check_kind','coco')
-    if kind=='region' and row.get('region_fallback'):
+    if (kind=='region' and row.get('region_fallback')) or (kind=='percent' and row.get('percent_fallback')):
         evidence['fallback_anchors']=copy.deepcopy(anchors)
     scored=[]
     if kind=='coco':
@@ -205,6 +209,8 @@ def evaluate(task,frame,row):
             retained.append(hit)
     if any(candidate['detected'] is None for candidate in evidence['candidates']):
         evidence['reason']='At least one PADDING B condition is UNKNOWN'
+        if kind=='percent' and row.get('percent_fallback') and retained:
+            return retained,True,evidence
         for candidate in evidence['candidates']:
             candidate['accepted']=False
         return [],None,evidence

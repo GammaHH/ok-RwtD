@@ -16,7 +16,7 @@ window.createTargetConditionEditor=function(onChange){
   const features=[['','選擇檢查 Feature'],...Array.from(el('featureSelect').options).filter(o=>o.value&&!o.disabled).map(o=>[o.value,o.text])];
   const kind=row.check_kind||'coco';
   select('B 辨識類型',[['coco','COCO 圖示'],['ocr','OCR 文字'],['number','OCR 數字'],['percent','OCR 百分比'],['region','OCR 區域優先順序']],kind,v=>{
-   for(const key of ['check_feature','match','check_text','check_text_match','check_op','check_value','region_priority','region_fallback'])delete row[key];
+   for(const key of ['check_feature','match','check_text','check_text_match','check_op','check_value','region_priority','region_fallback','percent_fallback'])delete row[key];
    row.check_kind=v;
    if(v==='coco')Object.assign(row,{check_feature:'',match:'disappeared'});
    if(v==='ocr')Object.assign(row,{check_text:'',check_text_match:'exact'});
@@ -58,6 +58,21 @@ window.createTargetConditionEditor=function(onChange){
     active=true;onChange();
    };
    label.append(input);host.append(label);
+   if(kind==='percent'){
+    const fallbackLabel=document.createElement('label'),fallback=document.createElement('input');
+    fallback.type='checkbox';fallback.checked=row.percent_fallback===true;
+    fallback.onchange=()=>{
+     row.percent_fallback=fallback.checked;
+     if(fallback.checked){
+      row.selection_mode='paired';
+      el('targetPositionPolicy').value='same';
+      if(!['first_top_to_bottom','first_bottom_to_top'].includes(el('targetMultiplicity').value))el('targetMultiplicity').value='first_top_to_bottom';
+     }
+     active=true;render();onChange();
+    };
+    fallbackLabel.append(fallback,document.createTextNode('無可選列時依最上／最下保底（包含百分比無法辨識）'));
+    host.append(fallbackLabel);
+   }
   }
   const rectLabel=document.createElement('label'),rectInput=document.createElement('input');rectLabel.textContent='偏移與檢查 ROI（X 偏移,Y 偏移,寬,高）';rectInput.placeholder='+20,-20,54,54';rectInput.value=row.check_width&&row.check_height?[row.offset_x??0,row.offset_y??0,row.check_width,row.check_height].join(','):'';rectInput.onchange=()=>{const values=rectInput.value.split(',').map(v=>v.trim());if(values.length!==4||values.some(v=>!/^[-+]?\d+$/.test(v))){rectInput.setCustomValidity('請輸入四個整數，例如 +20,-20,54,54');rectInput.reportValidity();return;}const[x,y,w,h]=values.map(Number);if(Math.abs(x)>2400||Math.abs(y)>2400||w<1||w>1080||h<1||h>2400){rectInput.setCustomValidity('偏移需在 ±2400，寬 1～1080，高 1～2400');rectInput.reportValidity();return;}rectInput.setCustomValidity('');delete row.padding_y;Object.assign(row,{offset_x:x,offset_y:y,check_width:w,check_height:h});active=true;render();onChange();};rectLabel.append(rectInput);host.append(rectLabel);
   for(const[key,title,min,max,step]of [['check_threshold','B 信心門檻',.5,1,.01],['offset_x','X 偏移量（+ 右／− 左）',-2400,2400,1],['offset_y','Y 偏移量（+ 下／− 上）',-2400,2400,1],['check_width','檢查 ROI 寬度（px）',1,1080,1],['check_height','檢查 ROI 高度（px）',1,2400,1]]){const label=document.createElement('label'),input=document.createElement('input');label.textContent=title;input.type='number';Object.assign(input,{min,max,step,value:row[key]??(key==='check_threshold'?.8:key.startsWith('offset_')?0:'')});input.placeholder=key==='check_width'?'空白沿用 B TAG 寬度':key==='check_height'?'空白沿用 A 目標高度':'';input.onchange=()=>{if(key!=='check_threshold'){delete row.padding_y;row.offset_x??=0;row.offset_y??=0;}if(input.value==='')delete row[key];else row[key]=Number(input.value);active=true;onChange();};label.append(input);host.append(label);}
@@ -87,9 +102,13 @@ window.createTargetConditionEditor=function(onChange){
    const response=await fetch('/api/padding-preview',{method:'POST',headers,body:JSON.stringify(snapshot)});
    stage='讀取 Dashboard 配對結果';const result=await response.json();
    if(!response.ok)throw Error(result.error||'配對預覽失敗');
-   if(targetPolicy==='first_bottom_to_top')result.selected=[...(result.retained||[])].sort((a,b)=>b.bbox[1]-a.bbox[1]||a.bbox[0]-b.bbox[0]||(b.confidence||0)-(a.confidence||0)||(a.feature||'').localeCompare(b.feature||'' )).slice(0,1);
+   const previewFallback=clause.percent_fallback&&!result.retained?.length&&result.fallback_anchors?.length&&['first_top_to_bottom','first_bottom_to_top'].includes(targetPolicy);
+   if(previewFallback||targetPolicy==='first_bottom_to_top'){
+    const direction=targetPolicy==='first_bottom_to_top'?-1:1;
+    result.selected=[...(previewFallback?result.fallback_anchors:result.retained||[])].sort((a,b)=>direction*(a.bbox[1]-b.bbox[1])||a.bbox[0]-b.bbox[0]||(b.confidence||0)-(a.confidence||0)||(a.feature||'').localeCompare(b.feature||'' )).slice(0,1);
+   }
    const summary=document.createElement('p');summary.textContent='本列配對 '+result.result+' · 保留 '+(result.retained?.length||0)+' · '+(result.bypassed_b?'忽略 B／NO_GEM；指定第 '+result.requested_index+'，實選第 '+result.selected_index:targetPolicy==='first_bottom_to_top'?'最下方、同高度取最左':'最上方第一個')+' '+(result.selected?.[0]?.bbox?.join(', ')||'無')+' · Frame '+result.frame_id+(result.reason?' · '+result.reason:'');host.append(summary);
-   const note=document.createElement('small');note.textContent='直接重新辨識設定中目前顯示的圖片，不沿用舊辨識結果、不重拍、不點擊。相同編號／名稱的綠框是 A 目標與對應的 B 命中；藍框是該 A 的檢查 ROI。其他 AND／OR 列仍於執行時判斷。';host.append(note);
+   const note=document.createElement('small');note.textContent=(previewFallback?'此列無合格百分比，已標出 A 保底位置。':'')+'直接重新辨識設定中目前顯示的圖片，不沿用舊辨識結果、不重拍、不點擊。相同編號／名稱的綠框是 A 目標與對應的 B 命中；藍框是該 A 的檢查 ROI。其他 AND／OR 列仍於執行時判斷。';host.append(note);
    const shownBlob=result.normalized_image_png?new Blob([Uint8Array.from(atob(result.normalized_image_png),c=>c.charCodeAt(0))],{type:'image/png'}):imageBlob;
    const url=URL.createObjectURL(shownBlob);previewUrls.push(url);if(previewUrls.length>6)URL.revokeObjectURL(previewUrls.shift());
    const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),image=document.createElementNS(ns,'image');svg.setAttribute('viewBox','0 0 1080 2400');svg.setAttribute('width','100%');svg.style.maxHeight='650px';image.setAttribute('href',url);image.setAttribute('width','1080');image.setAttribute('height','2400');svg.append(image);
