@@ -7,6 +7,7 @@ from concurrent.futures import Future
 
 
 COMMANDS = {'status','screenshot','farm_start','farm_pause','farm_resume','farm_stop',
+            'module_list','module_queue','module_preempt',
             'farm_stop_after_round','activity_list','activity_queue','trigger_status','diagnosis_latest'}
 _service = None
 
@@ -85,6 +86,7 @@ class RemoteControl:
         self.lock=threading.RLock()
         self.start_job=self.stop_job=None
         self.catalog=[]
+        self.module_catalog=[]
         self.next_catalog_refresh=0
 
     def farm_task(self):
@@ -98,7 +100,14 @@ class RemoteControl:
         from .profile import rwtd_profile
         from .manual_device_tests import validate_parameters
         profile=rwtd_profile(self.root,validate_parameters)
-        self.catalog=DecisionGraphStore(profile,ModuleStore(profile)).catalog()
+        store=ModuleStore(profile)
+        self.catalog=DecisionGraphStore(profile,store).catalog()
+        self.module_catalog=[{key:row[key] for key in ('id','name','revision')} for row in store.catalog()]
+
+    def preemption_pending(self):
+        with self.lock:
+            return any(job['command']=='module_preempt' and not job['future'].done()
+                       and self.mailbox.clock()<job['expires'] for job in self.owner_queue)
 
     def snapshot(self):
         with self.lock:return copy.deepcopy(self.cached)
@@ -159,6 +168,25 @@ class RemoteControl:
                 self.stop_job=job
                 task.controller.device_stop.set()  # latch only; no input from GUI/Bot
             elif cmd=='diagnosis_latest':self.diagnosis(job)
+            elif cmd=='module_list':
+                self.refresh_catalog()
+                self.finish(job,'可執行模組',data=self.module_catalog)
+            elif cmd in {'module_queue','module_preempt'}:
+                if not running:raise ValueError('請先啟動 FARM，再插入模組')
+                if set(payload)-{'module','runs'}:raise ValueError('模組參數無效')
+                runs=payload.get('runs',1)
+                if type(runs) is not int or not 1<=runs<=100:raise ValueError('執行次數須為 1～100')
+                matches=[row for row in self.module_catalog
+                         if payload.get('module') in (row['id'],row['name'])]
+                if len(matches)!=1:raise ValueError('模組不存在或同名；請從模組選單選取')
+                row=matches[0]
+                job['module']=copy.deepcopy(row)
+                with self.lock:
+                    if cmd=='module_preempt':
+                        index=next((i for i,item in enumerate(self.owner_queue)
+                                    if item['command']!='module_preempt'),len(self.owner_queue))
+                        self.owner_queue.insert(index,job)
+                    else:self.owner_queue.append(job)
             elif running:
                 with self.lock:self.owner_queue.append(job)
             elif cmd=='screenshot':
@@ -179,6 +207,7 @@ class RemoteControl:
         task._discord_paused=False
         task._discord_pause_total=0
         task._discord_pause_at=None
+        task.controller.remote_preemption_pending=self.preemption_pending
         job=getattr(task,'_discord_start_job',None)
         if job:
             self.finish(job,'FARM 已啟動：'+task.info.get('Canvas',''))
@@ -186,6 +215,7 @@ class RemoteControl:
             self.start_job=None
 
     def ended(self,task,error=None):
+        task.controller.remote_preemption_pending=None
         task._discord_running=False
         task._discord_canvas_id=None
         job=getattr(task,'_discord_start_job',None)
@@ -222,6 +252,29 @@ class RemoteControl:
                 elif cmd=='farm_stop_after_round':
                     task.farm.remote_stop_after_round=True
                     self.finish(job,'已設定本次主 FARM 輪次完成後停止，屆時不插入活動')
+                elif cmd in {'module_queue','module_preempt'}:
+                    if task._discord_paused:raise ValueError('FARM 已暫停；請先恢復再執行模組')
+                    if not task._activity_ready():
+                        with self.lock:self.owner_queue.appendleft(job)
+                        return False
+                    try:
+                        result=task.execute_remote_module(job['module'],job['payload'].get('runs',1))
+                        if result.get('action_completed'):
+                            self.finish(job,'模組已完成，FARM 接續原流程：'+job['module']['name'],
+                                        data={'module':job['module']['id'],'runs':job['payload'].get('runs',1),
+                                              'result_status':result.get('status')})
+                        else:
+                            task.controller.device_stop.set()
+                            task.farm.stop()
+                            self.mailbox.finish(job,{'status':'FAILED','message':'插入模組未完成；FARM 已停止，請檢查畫面'})
+                    except Exception:
+                        task.controller.device_stop.set()
+                        task.farm.stop()
+                        raise
+                    finally:
+                        task.controller.activity_inline_observers=task._discord_paused
+                        task.controller._invalidate_trigger_frames()
+                    return False  # The owner boundary was occupied by this module.
                 elif cmd=='screenshot':
                     if not task._activity_ready():
                         with self.lock:self.owner_queue.appendleft(job)
@@ -238,7 +291,8 @@ class RemoteControl:
                 elif cmd=='diagnosis_latest':self.diagnosis(job)
                 else:raise ValueError('不支援的執行期指令')
             except Exception as exc:
-                if job['command']=='screenshot':task.controller.activity_inline_observers=task._discord_paused
+                if job['command'] in {'screenshot','module_queue','module_preempt'}:
+                    task.controller.activity_inline_observers=task._discord_paused
                 self.mailbox.finish(job,{'status':'FAILED','message':str(exc)[:500]})
         owner=task._owner
         with self.lock:

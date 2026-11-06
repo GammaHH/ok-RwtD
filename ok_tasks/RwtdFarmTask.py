@@ -228,6 +228,27 @@ class RwtdFarmTask(RwtdControlDashboardTask):
             self.module_progress[key] = completed+result.get('completed_step_index',advanced)
         return result
 
+    def execute_remote_module(self, selected, runs):
+        """Only RemoteControl.owner_tick calls this on the native device owner."""
+        import threading
+        from src.rwtd.android_core.workflow_model import resolve_step
+        if self.controller.owner != threading.get_ident() or self.controller.device_stop.is_set():
+            raise ValueError('遠端模組必須由有效的 FARM 操作執行端執行')
+        if type(runs) is not int or not 1<=runs<=100:
+            raise ValueError('執行次數須為 1～100')
+        current=self.manual.store.get(selected['id'])
+        if current['revision']!=selected['revision']:
+            raise ValueError('模組在排隊後已變更；未執行')
+        steps=[resolve_step(current,copy.deepcopy(step)) for _ in range(runs) for step in current['steps']]
+        self.log_info('RWTD_DC_MODULE_START '+json.dumps({'module':current['id'],'runs':runs}))
+        result=self.manual.execute_canvas_steps(steps,current['id'],current['revision'],
+            self.controller.device_stop,request={'task_id':'DiscordModule','node':'DiscordModule',
+                'preempt_operations':True,'definition':{'repeat_runs':runs}},
+            loop_settings=self._owner.runtime.graph['settings'])
+        self.log_info('RWTD_DC_MODULE_DONE '+json.dumps({'module':current['id'],
+            'status':result.get('status'),'action_completed':result.get('action_completed')}))
+        return result
+
     def _effect(self, payload):
         effect_started=timing_start(self)
         self._sync_farm()

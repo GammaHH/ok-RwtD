@@ -11,10 +11,13 @@ class NodeStop:
         if self.stop.is_set() or self.controller.device_stop.is_set():
             return True
         if not self.preempted:
+            remote=getattr(self.controller,'remote_preemption_pending',None)
+            if callable(remote) and not (self.request or {}).get('preempt_operations'):
+                self.preempted=bool(remote())
             scheduler = getattr(self.controller,'trigger_scheduler',None)
             # An interrupting Trigger completes its node before another peer
             # can interrupt it. Ordinary queued Trigger operations may yield.
-            if scheduler is not None and not (self.request or {}).get('preempt_operations'):
+            if not self.preempted and scheduler is not None and not (self.request or {}).get('preempt_operations'):
                 self.preempted = scheduler.preemption_pending()
         return self.preempted
 
@@ -29,7 +32,8 @@ class NodeStop:
         enabled=(tasks is None or any(t['definition'].get('preempt_operations')
                                      and t['definition'].get('trigger_interval',3)>0
                                      for t in tasks.values()))
-        if scheduler is None or not enabled or (self.request or {}).get('preempt_operations'):
+        remote=callable(getattr(self.controller,'remote_preemption_pending',None))
+        if ((scheduler is None or not enabled) and not remote) or (self.request or {}).get('preempt_operations'):
             return self.stop.wait(seconds)
         deadline = None if seconds is None else time.monotonic()+seconds
         while not self.is_set():

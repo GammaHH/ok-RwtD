@@ -37,7 +37,11 @@ def start_bot(service,settings):
             logging.getLogger(__name__).info('RWTD_DC_ACCEPT command=%s id=%s user=%s guild=%s channel=%s',
                 command,interaction.id,interaction.user.id,interaction.guild_id,interaction.channel_id)
             await interaction.edit_original_response(content='指令已接受並排入 OK 佇列，尚未完成。')
-            result=await asyncio.wait_for(asyncio.wrap_future(future),120)
+            waiting=asyncio.wrap_future(future)
+            # A response timeout must not cancel the receipt of an in-flight module.
+            if command in {'module_queue','module_preempt'}:
+                waiting=asyncio.shield(waiting)
+            result=await asyncio.wait_for(waiting,120)
             message=result['status']+' · '+result['message']
             files=[]
             if result.get('data') is not None:
@@ -89,6 +93,30 @@ def start_bot(service,settings):
     @farm.command(name='stop-after-round',description='本次主 FARM 輪次完成後停止')
     async def stop_after(interaction:discord.Interaction):await execute(interaction,'farm_stop_after_round')
     client.tree.add_command(farm)
+
+    module=app_commands.Group(name='module',description='在執行中的 FARM 排隊或插隊執行模組')
+
+    async def module_choices(interaction:discord.Interaction,current:str):
+        if not permitted(interaction):return []
+        query=current.casefold()
+        return [app_commands.Choice(name=(row['name']+' · '+row['id'])[:100],value=row['id'])
+                for row in service.module_catalog
+                if query in row['name'].casefold() or query in row['id'].casefold()][:25]
+
+    @module.command(name='list',description='列出可執行的已儲存模組')
+    async def module_list(interaction:discord.Interaction):
+        await execute(interaction,'module_list')
+
+    @module.command(name='queue',description='等目前節點完成後執行模組；完成後接續 FARM')
+    async def module_queue(interaction:discord.Interaction,module:str,runs:app_commands.Range[int,1,100]=1):
+        await execute(interaction,'module_queue',{'module':module,'runs':runs})
+    module_queue.autocomplete('module')(module_choices)
+
+    @module.command(name='preempt',description='安全中止目前節點剩餘動作並插入模組；失敗則停止 FARM')
+    async def module_preempt(interaction:discord.Interaction,module:str,runs:app_commands.Range[int,1,100]=1):
+        await execute(interaction,'module_preempt',{'module':module,'runs':runs})
+    module_preempt.autocomplete('module')(module_choices)
+    client.tree.add_command(module)
 
     activity=app_commands.Group(name='activity',description='查詢或排入已設定的活動')
     @activity.command(name='list',description='顯示活動設定、待辦與到期狀態')
