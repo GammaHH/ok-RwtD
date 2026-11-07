@@ -98,10 +98,12 @@ class ActivityScheduleDialog(QDialog):
             interval.addWidget(field)
             interval.addWidget(QLabel(label))
             units.append(field)
-        form.addRow('冷卻間隔（從每批第一場開始算）', interval)
+        form.addRow('排程間隔（每次到期累積一場）', interval)
+        max_pending = self.spin(saved.get('max_pending_runs', 0), 1000)
+        form.addRow('定期排程最多累積場數（0＝不限）', max_pending)
         layout.addLayout(form)
         row = dict(box=box, enabled=enabled, name=name, canvas=canvas,
-                   initial=initial, units=units, extra=dict(saved))
+                   initial=initial, units=units, max_pending=max_pending, extra=dict(saved))
         self.rows.append(row)
         self.row_layout.insertWidget(len(self.rows)-1, box)
         remove.clicked.connect(lambda: self.remove_row(row))
@@ -129,7 +131,7 @@ class ActivityScheduleDialog(QDialog):
             rows.append(dict(row['extra'], id=row['name'].text().strip(),
                 enabled=row['enabled'].isChecked(), canvas=row['canvas'].currentData(),
                 initial_runs=row['initial'].value(), interval_days=days,
-                interval_hours=hours, interval_minutes=minutes))
+                interval_hours=hours, interval_minutes=minutes, max_pending_runs=row['max_pending'].value()))
         try:
             resolve_activity_schedules({ENABLED_KEY: True, SCHEDULES_KEY: rows},
                                       self.catalog, self.main_canvas_id)

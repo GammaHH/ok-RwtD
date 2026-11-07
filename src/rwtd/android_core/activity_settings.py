@@ -23,7 +23,8 @@ DEFAULTS = {ENABLED_KEY: False, SCHEDULES_KEY: '[]'}
 DESCRIPTIONS = {
     ENABLED_KEY: '啟用多活動插入；在正常 Farm 整輪完成後執行已到期的活動，活動完成後繼續 Farm。',
     SCHEDULES_KEY: '活動排程 JSON 陣列，可新增多項。每項設定 id、canvas（Canvas ID）、enabled、'
-                   'initial_runs（首次連跑次數，預設 1；0 代表已完成，先等待間隔）、interval_days、interval_hours、interval_minutes。'
+                   'initial_runs（首次連跑次數，預設 1；0 代表已完成，先等待間隔）、interval_days、interval_hours、interval_minutes、'
+                   'max_pending_runs（定期排程最多累積場數，0 代表不限）。'
                    '首次在第一個正常整輪完成後插入，連跑 initial_runs 次；之後每次到期執行 1 次。間隔由天／小時／分鐘相加，'
                    '須大於 0 且不超過 365 天。依列表順序決定優先；[] 代表不排活動。範例：'
                    '[{"id":"event1","canvas":"CanvasID","initial_runs":3,"interval_minutes":190}]。'
@@ -92,7 +93,8 @@ def resolve_activity_schedules(config, catalog, main_canvas_id):
     output = []
     seen = set()
     seen_canvases = set()
-    allowed = {'id', 'canvas', 'enabled', 'initial_runs', 'interval_days', 'interval_hours', 'interval_minutes'}
+    allowed = {'id', 'canvas', 'enabled', 'initial_runs', 'interval_days', 'interval_hours', 'interval_minutes',
+               'max_pending_runs'}
     for index, item in enumerate(raw, 1):
         prefix = f'活動排程第 {index} 項：'
         if not isinstance(item, dict) or set(item) - allowed:
@@ -119,6 +121,11 @@ def resolve_activity_schedules(config, catalog, main_canvas_id):
             initial_runs = item.get('initial_runs', 1)
             if type(initial_runs) is not int or not 0 <= initial_runs <= 1000:
                 raise ValueError(prefix + 'initial_runs 必須是 0～1000 的整數')
+            max_pending_runs = item.get('max_pending_runs', 0)
+            if type(max_pending_runs) is not int or not 0 <= max_pending_runs <= 1000:
+                raise ValueError(prefix + 'max_pending_runs 必須是 0～1000 的整數')
+            if max_pending_runs:
+                resolved['max_pending_runs'] = max_pending_runs
             if resolved['canvas_id'] in seen_canvases:
                 raise ValueError(prefix + '同一活動 Canvas 不可重複排程')
             seen_canvases.add(resolved['canvas_id'])

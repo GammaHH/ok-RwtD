@@ -333,7 +333,10 @@ class RwtdFarmTask(RwtdControlDashboardTask):
         self.controller._log('FAILED', detail, **{key: event.get(key) for key in
                              ('chain', 'node', 'node_name', 'node_kind', 'reason',
                               'failure_count', 'failure_limit')})
-        text = event['name']+'：達到失敗上限，已交接並檢查失敗事件 Trigger。'
+        if event.get('failure_kind') == 'chain_timeout':
+            text = f"{event['name']}：達到 {event['timeout_minutes']:g} 分鐘時限，已退出交接。"
+        else:
+            text = event['name']+'：達到失敗上限，已交接並檢查失敗事件 Trigger。'
         self.log_warning(text)
         if self.config.get('Failure Notifications', True):
             try:

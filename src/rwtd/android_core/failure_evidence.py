@@ -26,6 +26,8 @@ def canvas_failure_context(*, owner=None, runtime=None, scheduler=None, store=No
 
 def apply_node_notification_policy(event, graph):
     """Mute only this node's failure delivery; retain local evidence and counters."""
+    if event.get('kind') == 'chain' and event.get('failure_kind') == 'chain_timeout':
+        return event
     node_id = FailureEvidence.node_key(event)
     node = next((n for n in (graph or {}).get('nodes', [])
                  if n.get('id') == node_id), {})
@@ -120,10 +122,12 @@ class FailureEvidence:
             try:
                 categories={'chain':'CHAIN_FAILURE_LIMIT','node_limit':'NODE_EXECUTION_LIMIT',
                             'blocked':'NODE_BLOCKED','exclusion':'INPUT_EXCLUSION_SKIPPED'}
-                record=self.monitor.report(key,categories.get(event['kind'],'RECOGNITION_RETRY_EXHAUSTED'),
+                timeout = event['kind'] == 'chain' and event.get('failure_kind') == 'chain_timeout'
+                category = 'CHAIN_TIMEOUT' if timeout else categories.get(event['kind'],'RECOGNITION_RETRY_EXHAUSTED')
+                record=self.monitor.report(key,category,
                     str(event.get('reason') or 'Recognition attempts exhausted'),
                     notify=event.get('notify_discord') is True and notification_allowed(event),
-                    count_failure=False,error_identifier=event['kind']+'_limit',
+                    count_failure=False,error_identifier='chain_timeout' if timeout else event['kind']+'_limit',
                     save_screenshot=screenshot_allowed(event),
                     error_details={k:v for k,v in event.items() if k not in {'frame','result'}},
                     device=self.monitor.states.get(key,{}).get('device'))

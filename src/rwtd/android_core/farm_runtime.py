@@ -106,6 +106,7 @@ class FarmRuntime:
             interval = entry.get('interval_seconds')
             due = entry.get('first_due')
             initial_runs = entry.get('initial_runs',1)
+            max_pending_runs = entry.get('max_pending_runs', 0)
             if not isinstance(key, str) or not key or key in ids:
                 raise ValueError('活動 ID 必須非空且不可重複')
             if (type(interval) not in (int, float) or not math.isfinite(interval) or interval <= 0):
@@ -114,6 +115,8 @@ class FarmRuntime:
                 raise ValueError('活動到期時間無效')
             if type(initial_runs) is not int or not 0 <= initial_runs <= 1000:
                 raise ValueError('首次活動次數必須是 0 至 1000 的整數')
+            if type(max_pending_runs) is not int or not 0 <= max_pending_runs <= 1000:
+                raise ValueError('活動最多累積場數必須是 0 至 1000 的整數')
             from .retreatable_km import with_stage, resolve_graph
             graph = resolve_graph(validate_canvas(with_stage(entry.get('graph'),
                 self.graph.get('settings',{}).get('game_stage'), inherit=True), self.modules))
@@ -122,6 +125,7 @@ class FarmRuntime:
             prepared.append({'id':key, 'graph':graph, 'name':str(entry.get('name',key)),
                              'canvas_id':entry.get('canvas_id',key),
                              'interval_seconds':interval,
+                             'max_pending_runs':max_pending_runs,
                              'next_due':(self.clock()+(interval if initial_runs==0 else 0)) if due is None else due,
                              'status':'WAITING', 'time_guards':entry.get('time_guards') or TimeGuards(),
                              'initial_runs':initial_runs, 'initial_completed':initial_runs==0,
@@ -133,8 +137,14 @@ class FarmRuntime:
         self.activity_ready, self.activity_switch = activity_ready, activity_switch
 
     def activity_snapshot(self, *, include_runtime=True):
+        now = self.clock()
         def public(entry):
-            return {key:copy.deepcopy(value) for key,value in entry.items() if key not in {'graph','time_guards'}}
+            result = {key:copy.deepcopy(value) for key,value in entry.items() if key not in {'graph','time_guards'}}
+            if entry:
+                slots = self._activity_due_slots(entry, now)
+                initial = entry['initial_runs_left'] if slots and not entry.get('deferred_runs') else 0
+                result['scheduled_pending_runs'] = self._scheduled_activity_runs(entry, slots, initial)
+            return result
         data = public(self.activity or {})
         data.update(enabled=bool(self.activities), active=self.activity_active, pending=self.activity_pending,
                     entries=[public(entry) for entry in self.activities],
@@ -159,15 +169,30 @@ class FarmRuntime:
                                           id=self.activity['id'], name=self.activity['name'], **fields))
         self.activity_history = self.activity_history[-50:]
 
+    @staticmethod
+    def _activity_due_slots(entry, now):
+        overdue = now - entry['next_due']
+        return 0 if overdue < 0 else 1 + math.floor(overdue / entry['interval_seconds'])
+
+    @staticmethod
+    def _scheduled_activity_runs(entry, slots, initial_runs):
+        periodic = slots - int(bool(initial_runs))
+        limit = entry['max_pending_runs']
+        return initial_runs + (min(periodic, limit) if limit else periodic)
+
     def _activity_start(self, repeat=False):
-        continuing_batch = repeat
         if not repeat:
             self.activity = self.activity_queue.pop(0)
-            continuing_batch = self.activity.pop('deferred_batch', False)
-            manual_runs=self.activity.pop('manual_runs',0)
-            scheduled_runs=(self.activity['initial_runs_left'] if not self.activity['initial_completed']
-                            else int(not continuing_batch and self.clock()>=self.activity['next_due']))
-            self.activity['batch_runs'] = max(1,manual_runs+scheduled_runs)
+            deferred_runs = self.activity.pop('deferred_runs', 0)
+            manual_runs = self.activity.pop('manual_runs', 0)
+            slots = self._activity_due_slots(self.activity, self.clock())
+            initial_runs = self.activity['initial_runs_left'] if not deferred_runs else 0
+            # The first scheduled slot carries the configured initial batch.
+            # Later slots each add one run, even if no safe handoff was available.
+            consumed_slots = max(1, slots) if initial_runs else slots
+            scheduled_runs = self._scheduled_activity_runs(self.activity, consumed_slots, initial_runs)
+            self.activity['next_due'] += consumed_slots * self.activity['interval_seconds']
+            self.activity['batch_runs'] = manual_runs + deferred_runs + scheduled_runs
             self.activity['repetition'] = 1
         child = FarmRuntime(self.activity['graph'], self.modules, self.effect, self.queued,
                             self.failure_notice, self.clock, rounds=1, source=self.source,
@@ -182,8 +207,6 @@ class FarmRuntime:
                             time_guards=self.activity.get('time_guards'),
                             exhaustion_callback=self.exhaustion_callback)
         self.activity_paused_at = self.clock()
-        if not continuing_batch:
-            self.activity['next_due'] = self.activity_paused_at + self.activity['interval_seconds']
         self.activity_child = child
         self.activity['status'] = 'RUNNING'
         self._activity_event('STARTED', round=self.schedule.rounds,
@@ -292,13 +315,7 @@ class FarmRuntime:
                 self.activity['initial_completed'] = self.activity['initial_runs_left'] == 0
             safe_next_activity = not had_failed_exit and child.runtime.outcome == 'SUCCESS'
             if not safe_next_activity:
-                # Preserve remotely queued extra repetitions across an unsafe
-                # boundary, in addition to the native initial-runs remainder.
-                remaining=max(0,self.activity['batch_runs']-self.activity['repetition'])
-                extra=max(0,remaining-self.activity['initial_runs_left'])
-                if extra:self.activity['manual_runs']=self.activity.get('manual_runs',0)+extra
-                if remaining:
-                    self.activity['deferred_batch'] = True
+                self.activity['deferred_runs'] = self.activity['batch_runs'] - self.activity['repetition']
                 # Internal Canvas routing has finished; this is solely the next
                 # cross-Canvas insertion gate. Keep due jobs/repeats pending for
                 # the next safe main Farm round instead of discarding or running
@@ -377,6 +394,7 @@ class FarmRuntime:
 
     def _leave(self, failed=False):
         if failed:
+            self.notification_timing.failure()
             self.activity_round_failed_exit = True
             self.failed_chain_exits += 1
         if self.runtime.flow_key and self.runtime.outcome!='SUCCESS':
@@ -399,7 +417,8 @@ class FarmRuntime:
         self.runtime.trace.clear()
         self.handoff_failed = failed
         self.route_active = False
-        if failed and self.schedule.events[-1]['exhausted']:
+        if failed and (self.schedule.events[-1]['exhausted']
+                       or self.schedule.events[-1].get('failure_kind') == 'chain_timeout'):
             event = self.schedule.events[-1]
             self.pending_notice = copy.deepcopy(event)
             if callable(self.exhaustion_callback) and self.source!='simulation':
@@ -471,7 +490,7 @@ class FarmRuntime:
         if routed:
             self.route_active = True
         self.handoff_pending = self.handoff_failed = False
-        # The stored exhausted-chain notification remains due even if a solver
+        # The stored chain failure notification remains due even if a solver
         # has chosen an explicit NEXT entry.
         if self.pending_notice:
             try:
@@ -607,7 +626,7 @@ class FarmRuntime:
                     self.reason='Discord 指定主 FARM 本輪完成後停止；未插入活動'
                     return
                 due_activities = [entry for entry in self.activities
-                                  if entry.get('deferred_batch') or entry.get('manual_runs',0)>0
+                                  if entry.get('deferred_runs') or entry.get('manual_runs',0)>0
                                   or self.clock() >= entry['next_due']]
                 if normal_round:
                     self.activity_queue = due_activities

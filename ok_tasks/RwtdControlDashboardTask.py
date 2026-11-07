@@ -125,7 +125,7 @@ class RwtdControlDashboardTask(BaseTask):
         request=getattr(controller,'trigger_work',None)
         # Only owner-thread operation evidence may inherit the running request;
         # another observer can report concurrently and carries its own task_id.
-        if (not event.get('task_id') and request
+        if (event.get('failure_kind') != 'chain_timeout' and not event.get('task_id') and request
                 and threading.get_ident()==getattr(controller,'owner',None)):
             event['task_id']=request['task_id']
             event['trigger_interval']=request.get('definition',{}).get('trigger_interval')
