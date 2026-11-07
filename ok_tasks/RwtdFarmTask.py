@@ -512,8 +512,11 @@ class RwtdFarmTask(RwtdControlDashboardTask):
                                     invalidate_observers=self.controller._invalidate_trigger_frames)
             self._activity_owner = self.farm
             self._activity_contexts = {}
+            from src.rwtd.android_core.activity_schedule_state import ActivityScheduleState
             self.farm.configure_activities(activity_entries, activity_ready=self._activity_ready,
-                                           activity_switch=self._activity_switch)
+                                           activity_switch=self._activity_switch,
+                                           activity_state=ActivityScheduleState(self.root) if activity_entries else None,
+                                           activity_clock=time.time)
             self.log_info('RWTD_ACTIVITY_CONFIG '+json.dumps(self.farm.activity_snapshot(),
                                                           ensure_ascii=False))
             self._sync_farm()

@@ -70,6 +70,8 @@ class FarmRuntime:
         self.activity_paused_at = None
         self.activity_ready = None
         self.activity_switch = None
+        self.activity_state = None
+        self.activity_clock = clock
         self.chain_reading = None
         self._enter()
 
@@ -92,13 +94,15 @@ class FarmRuntime:
                      'interval_seconds':interval_seconds, 'first_due':first_due}]
         self.configure_activities(entries, activity_ready=activity_ready, activity_switch=activity_switch)
 
-    def configure_activities(self, entries, *, activity_ready=None, activity_switch=None):
+    def configure_activities(self, entries, *, activity_ready=None, activity_switch=None,
+                             activity_state=None, activity_clock=None):
         """Independent intervals; collect due entries only after a normal Farm round."""
         if self.activity_pending:
             raise ValueError('活動執行中不可替換活動設定')
         if not isinstance(entries, list):
             raise ValueError('活動設定必須是清單')
         prepared, ids = [], set()
+        schedule_clock = activity_clock if activity_clock is not None else self.clock
         for entry in entries:
             if not isinstance(entry, dict):
                 raise ValueError('活動設定無效')
@@ -126,18 +130,23 @@ class FarmRuntime:
                              'canvas_id':entry.get('canvas_id',key),
                              'interval_seconds':interval,
                              'max_pending_runs':max_pending_runs,
-                             'next_due':(self.clock()+(interval if initial_runs==0 else 0)) if due is None else due,
+                             'next_due':(schedule_clock()+(interval if initial_runs==0 else 0)) if due is None else due,
                              'status':'WAITING', 'time_guards':entry.get('time_guards') or TimeGuards(),
                              'initial_runs':initial_runs, 'initial_completed':initial_runs==0,
                              'initial_runs_left':initial_runs,
                              'repetition':0, 'batch_runs':0})
             ids.add(key)
+        if activity_state is not None:
+            for entry in prepared:
+                if not activity_state.restore(entry):
+                    activity_state.save(entry)
+        self.activity_state, self.activity_clock = activity_state, schedule_clock
         self.activities = prepared
         self.activity = prepared[0] if prepared else None
         self.activity_ready, self.activity_switch = activity_ready, activity_switch
 
     def activity_snapshot(self, *, include_runtime=True):
-        now = self.clock()
+        now = self.activity_clock()
         def public(entry):
             result = {key:copy.deepcopy(value) for key,value in entry.items() if key not in {'graph','time_guards'}}
             if entry:
@@ -161,7 +170,10 @@ class FarmRuntime:
         if entry is None:raise ValueError('找不到已啟用的活動 ID；請先使用 /activity list')
         if self.activity_pending:raise ValueError('活動批次交接／執行中，請稍後排入')
         if entry.get('manual_runs',0)+runs>100:raise ValueError('活動待辦次數超過 100')
-        entry['manual_runs']=entry.get('manual_runs',0)+runs
+        manual_runs = entry.get('manual_runs', 0) + runs
+        if self.activity_state is not None:
+            self.activity_state.save(dict(entry, manual_runs=manual_runs))
+        entry['manual_runs'] = manual_runs
         entry['status']='WAITING_BOUNDARY'
 
     def _activity_event(self, status, **fields):
@@ -185,7 +197,7 @@ class FarmRuntime:
             self.activity = self.activity_queue.pop(0)
             deferred_runs = self.activity.pop('deferred_runs', 0)
             manual_runs = self.activity.pop('manual_runs', 0)
-            slots = self._activity_due_slots(self.activity, self.clock())
+            slots = self._activity_due_slots(self.activity, self.activity_clock())
             initial_runs = self.activity['initial_runs_left'] if not deferred_runs else 0
             # The first scheduled slot carries the configured initial batch.
             # Later slots each add one run, even if no safe handoff was available.
@@ -206,6 +218,8 @@ class FarmRuntime:
                                 activity_id=self.activity['id'], repetition=self.activity['repetition']),
                             time_guards=self.activity.get('time_guards'),
                             exhaustion_callback=self.exhaustion_callback)
+        if self.activity_state is not None:
+            self.activity_state.save(self.activity, starting=True)
         self.activity_paused_at = self.clock()
         self.activity_child = child
         self.activity['status'] = 'RUNNING'
@@ -627,7 +641,7 @@ class FarmRuntime:
                     return
                 due_activities = [entry for entry in self.activities
                                   if entry.get('deferred_runs') or entry.get('manual_runs',0)>0
-                                  or self.clock() >= entry['next_due']]
+                                  or self.activity_clock() >= entry['next_due']]
                 if normal_round:
                     self.activity_queue = due_activities
                     if self.activity_queue:
