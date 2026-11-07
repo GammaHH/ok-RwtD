@@ -3,12 +3,16 @@
     "stored_resolution": [
       1080,
       2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
     ]
   },
   "schema_version": 1,
   "id": "debugkit",
   "name": "偵錯",
-  "version": 30,
+  "version": 32,
   "steps": [
     {
       "verification_policy": "manual",
@@ -46,7 +50,9 @@
               "debug_close",
               "debug_leave",
               "get_reward",
-              "debug_leave2"
+              "debug_leave2",
+              "debug_leave3",
+              "debug_leave4"
             ]
           },
           {
@@ -123,7 +129,9 @@
               "debug_cancel",
               "debug_leave",
               "get_reward",
-              "debug_leave2"
+              "debug_leave2",
+              "debug_leave3",
+              "debug_leave4"
             ]
           },
           {

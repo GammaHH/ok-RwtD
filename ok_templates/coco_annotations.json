@@ -209,6 +209,12 @@
       "file_name": "35.png",
       "width": 1080,
       "height": 2400
+    },
+    {
+      "id": 38,
+      "file_name": "30.png",
+      "width": 1080,
+      "height": 2340
     }
   ],
   "annotations": [
@@ -1095,6 +1101,22 @@
       ],
       "area": 2024,
       "iscrowd": 0
+    },
+    {
+      "id": 69,
+      "image_id": 38,
+      "category_id": 64,
+      "bbox": [494, 1681, 91, 90],
+      "area": 8190,
+      "iscrowd": 0
+    },
+    {
+      "id": 70,
+      "image_id": 35,
+      "category_id": 70,
+      "bbox": [46, 2177, 98, 100],
+      "area": 9800,
+      "iscrowd": 0
     }
   ],
   "categories": [
@@ -1436,6 +1458,16 @@
     {
       "id": 69,
       "name": "expedition_icon",
+      "supercategory": ""
+    },
+    {
+      "id": 64,
+      "name": "debug_leave3",
+      "supercategory": ""
+    },
+    {
+      "id": 70,
+      "name": "debug_leave4",
       "supercategory": ""
     }
   ]

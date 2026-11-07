@@ -44,7 +44,17 @@ def start_bot(service,settings):
             result=await asyncio.wait_for(waiting,120)
             message=result['status']+' · '+result['message']
             files=[]
-            if result.get('data') is not None:
+            if command=='module_list' and result.get('data') is not None:
+                rows = result['data']
+                detail = '\n'.join(f"{row['name']} · {row['id']}" for row in rows)
+                message += f'（共 {len(rows)} 個）'
+                if len(detail) > 1400:
+                    files.append(discord.File(io.BytesIO(detail.encode('utf-8')), filename='modules.txt'))
+                    message += '\n完整清單見 modules.txt。'
+                elif detail:
+                    message += '\n' + detail
+                message += '\n排隊或插隊時可輸入模組名稱或 ID 搜尋。'
+            elif result.get('data') is not None:
                 data=result['data']
                 if command=='trigger_status':
                     data=[{k:t.get(k) for k in ('id','name','status','reason','current_node','last_error')}
@@ -98,12 +108,18 @@ def start_bot(service,settings):
 
     async def module_choices(interaction:discord.Interaction,current:str):
         if not permitted(interaction):return []
-        query=current.casefold()
+        query=current.strip().casefold()
+        matches = [row for row in service.module_catalog
+                   if query in row['name'].casefold() or query in row['id'].casefold()]
+        if query:
+            def rank(row):
+                names = (row['name'].casefold(), row['id'].casefold())
+                return (query not in names, not any(name.startswith(query) for name in names))
+            matches.sort(key=rank)
         return [app_commands.Choice(name=(row['name']+' · '+row['id'])[:100],value=row['id'])
-                for row in service.module_catalog
-                if query in row['name'].casefold() or query in row['id'].casefold()][:25]
+                for row in matches[:25]]
 
-    @module.command(name='list',description='列出可執行的已儲存模組')
+    @module.command(name='list',description='列出所有可執行的已儲存模組及 ID')
     async def module_list(interaction:discord.Interaction):
         await execute(interaction,'module_list')
 
