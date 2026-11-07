@@ -22,7 +22,20 @@ window.createFarmWorkspacePanel=function(api){
   function render(){rows.replaceChildren();for(const entry of activities){const row=document.createElement('div');row.className='toolbar';
    const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=entry.enabled!==false;enabled.title='啟用';enabled.onchange=()=>{entry.enabled=enabled.checked;mark();};row.append(enabled);
    const canvas=document.createElement('select');for(const item of canvases)canvas.add(new Option(item.name,item.id));canvas.value=entry.canvas||'';if(!canvases.some(c=>c.id===entry.canvas)&&entry.canvas)canvas.add(new Option('已移除：'+entry.canvas,entry.canvas,true,true));canvas.onchange=()=>{entry.canvas=canvas.value;mark();};row.append(canvas);
-   for(const [key,label,defaultValue]of [['initial_runs','首次次數',1],['interval_days','天',0],['interval_hours','小時',0],['interval_minutes','分鐘',0]]){const field=document.createElement('label'),input=document.createElement('input');field.textContent=label;input.type='number';input.min='0';input.step='1';input.value=entry[key]??defaultValue;input.oninput=()=>{entry[key]=Number(input.value);mark();};field.append(input);row.append(field);}
+   for(const [key,label,defaultValue,max] of [
+    ['initial_runs','首次次數',1,1000],
+    ['interval_days','天',0],
+    ['interval_hours','小時',0],
+    ['interval_minutes','分鐘',0],
+    ['max_pending_runs','定期排程最多累積場數（0＝不限）',0,1000],
+   ]){
+    const field=document.createElement('label'),input=document.createElement('input');
+    field.textContent=label;input.type='number';input.min='0';input.step='1';
+    if(max!==undefined)input.max=String(max);
+    input.value=entry[key]??defaultValue;
+    input.oninput=()=>{entry[key]=Number(input.value);mark();};
+    field.append(input);row.append(field);
+   }
    const remove=document.createElement('button');remove.type='button';remove.textContent='移除';remove.onclick=()=>{activities=activities.filter(a=>a!==entry);mark();render();};row.append(remove);rows.append(row);
   }paint();}
   add.onclick=()=>{activities.push({id:'event_'+crypto.randomUUID(),canvas:canvases[0]?.id||'',enabled:true,initial_runs:1,interval_minutes:190});mark();render();};
