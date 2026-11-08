@@ -151,6 +151,27 @@ class RwtdFarmTask(RwtdControlDashboardTask):
             return True
         return not self.controller._trigger_boundary()
 
+    def _recover_game(self, address, cancelled):
+        from src.rwtd.android_core.watchdog import restore_game_foreground
+        try:
+            if not restore_game_foreground(self.executor.device_manager, address, cancelled,
+                                           self.controller.device_stop.wait):
+                if cancelled():
+                    return
+                raise RuntimeError('Game foreground could not be verified')
+            self.farm.restart_from_first_chain()
+            self._activity_switch(self.farm)
+            self._activity_contexts.clear()
+            self.module_progress.clear()
+            self.farm_action_progress.clear()
+            self.uncertain_inputs.clear()
+            self.log_info('RWTD_GAME_RECOVERY_OK chain='+self.farm.schedule.current)
+            self.info_set('Game recovery', '遊戲已回到前景；FARM 從 C1 重新開始')
+        except Exception as exc:
+            self.farm.status = 'BLOCKED'
+            self.farm.reason = '遊戲復原失敗，FARM 已停止送出操作：'+type(exc).__name__
+            self.log_warning('RWTD_GAME_RECOVERY_FAILED '+self.farm.reason)
+
     def _save_round_timing(self, event):
         """Persist summaries even when detailed/timing logging is disabled."""
         if (event.get('outcome') != 'SUCCESS' or
@@ -533,12 +554,48 @@ class RwtdFarmTask(RwtdControlDashboardTask):
                 from src.rwtd.discord_control import current as remote_control
                 remote=remote_control()
                 if remote:remote.started(self)
+                recovery_address = None
+                recovery_requested_at = last_recovery = None
+                def cancelled():
+                    return (self.controller.device_stop.is_set() or self.exit_is_set()
+                            or not (continue_running() if continue_running else self.enabled))
                 yield self
-                while (continue_running() if continue_running else self.enabled) and not self.exit_is_set() and self.farm.status=='RUNNING':
+                while not cancelled() and (self.farm.status=='RUNNING' or recovery_address
+                                          or watchdog_registry.has_game_recovery(self)):
                     if self.monitor.stop_requested:
                         self.controller.device_stop.set()
                         break
                     if self.controller.device_stop.is_set():break
+                    if not getattr(self, '_discord_paused', False):
+                        if recovery_address is None:
+                            recovery_address = watchdog_registry.take_game_recovery(self)
+                            if recovery_address:
+                                recovery_requested_at = time.monotonic()
+                        if recovery_address:
+                            now = time.monotonic()
+                            if ((last_recovery is not None and now-last_recovery < 60)
+                                    or now-recovery_requested_at >= 15):
+                                self.farm.status = 'BLOCKED'
+                                self.farm.reason = '遊戲短時間內再次離開前景，或復原交接逾時'
+                                self.log_warning('RWTD_GAME_RECOVERY_FAILED '+self.farm.reason)
+                                break
+                            if self._activity_ready():
+                                try:
+                                    self._recover_game(recovery_address, cancelled)
+                                finally:
+                                    watchdog_registry.finish_game_recovery(self)
+                                recovery_address = None
+                                last_recovery = time.monotonic()
+                                if self.farm.status != 'RUNNING' or cancelled():
+                                    break
+                                watchdog_registry.rebase(self)
+                            self._publish_farm_status()
+                            self.sleep(.2)
+                            previous = time.monotonic()
+                            yield self
+                            continue
+                    if self.farm.status != 'RUNNING':
+                        break
                     if remote and not remote.owner_tick(self):
                         self.controller.trigger_observers.sync()
                         self.sleep(.2)

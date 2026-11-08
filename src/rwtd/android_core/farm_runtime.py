@@ -406,6 +406,45 @@ class FarmRuntime:
             self.runtime.observations.clear()
             self.runtime.trace.clear()
 
+    def restart_from_first_chain(self):
+        """Abandon the interrupted round and re-enter C1 with fresh observations."""
+        if self.activity_child is not None:
+            self.activity_child.stop()
+            if self.activity_state is not None:
+                self.activity_state.restore(self.activity)
+            else:
+                entry = self.activity
+                entry['deferred_runs'] = entry['batch_runs'] - entry['repetition']
+                entry['initial_runs_left'] = max(0, entry['initial_runs_left'] - 1)
+                entry['initial_completed'] = entry['initial_runs_left'] == 0
+        self.activity_child = None
+        self.activity_paused_at = None
+        self.activity_queue.clear()
+        self.activity_resume_round = False
+        self.activity_round_failed_exit = False
+        for entry in self.activities:
+            entry['status'] = 'WAITING'
+        self.runtime.control('stop')
+        previous = self.schedule
+        self.schedule = ChainSchedule(self.graph, previous.round_limit)
+        self.schedule.rounds = previous.rounds
+        self.schedule.total_failures = previous.total_failures
+        self.schedule.total_runs = previous.total_runs
+        self.schedule.events = previous.events
+        self.schedule.handoff_events = previous.handoff_events
+        self.watchers.stop()
+        self.watchers.start(self.graph, {}, self.source, self.notifications, self.modules,
+                            queue_inputs=self.source=='android_manual')
+        self.next_visits.clear()
+        self.next_routes.clear()
+        self.handoff_pending = self.handoff_failed = self.route_active = False
+        self.pending_notice = None
+        self.notification_timing.reset()
+        self.round_started_at = self.clock()
+        self.round_started_utc = datetime.now(timezone.utc)
+        self.status, self.reason = 'RUNNING', '遊戲已回到前景；從 C1 重新開始'
+        self._enter()
+
     def _leave(self, failed=False):
         if failed:
             self.notification_timing.failure()
