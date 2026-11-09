@@ -95,11 +95,14 @@ class RemoteControl:
                      if type(t).__name__=='RwtdFarmTask'),None)
 
     def refresh_catalog(self):
+        from functools import partial
         from .android_core.decision_graph import DecisionGraphStore
+        from .android_core.feature_catalog import feature_names
         from .android_core.module_store import ModuleStore
         from .profile import rwtd_profile
         from .manual_device_tests import validate_parameters
-        profile=rwtd_profile(self.root,validate_parameters)
+        features=feature_names(self.root)
+        profile=rwtd_profile(self.root,partial(validate_parameters,allowed_features=features or None))
         store=ModuleStore(profile)
         self.catalog=DecisionGraphStore(profile,store).catalog()
         self.module_catalog=[{key:row[key] for key in ('id','name','revision')} for row in store.catalog()]

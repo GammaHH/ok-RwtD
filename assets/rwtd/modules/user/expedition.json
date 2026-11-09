@@ -6,7 +6,7 @@
     ],
     "last_edit_resolution": [
       1080,
-      2400
+      2340
     ],
     "corrections": [
       "old_phone_y_plus_50_v1"
@@ -15,7 +15,7 @@
   "schema_version": 1,
   "id": "expedition",
   "name": "自動遠征",
-  "version": 35,
+  "version": 39,
   "steps": [
     {
       "verification_policy": "manual",
@@ -118,7 +118,7 @@
       "allow_unconfirmed_target": true,
       "x": 528,
       "y": 1425,
-      "duration_ms": 10000,
+      "duration_ms": 5000,
       "repeat_count": 1
     },
     {
@@ -144,6 +144,19 @@
             "threshold": 0.8,
             "match": "contains",
             "roi_tag": "next"
+          },
+          {
+            "type": "ocr",
+            "join": "AND",
+            "text": "結果",
+            "threshold": 0.8,
+            "match": "contains",
+            "roi": [
+              333,
+              201,
+              414,
+              145
+            ]
           }
         ]
       },
@@ -166,7 +179,7 @@
         "action": "retry_step",
         "when": "YES",
         "retry_step_id": "4",
-        "max_cycles": 2,
+        "max_cycles": 4,
         "wait_seconds": 1,
         "timeout_seconds": 60
       }
@@ -201,7 +214,7 @@
       "x": 438,
       "y": 1418,
       "duration_ms": 50,
-      "repeat_count": 1
+      "repeat_count": 2
     },
     {
       "verification_policy": "manual",
@@ -236,6 +249,5 @@
     610,
     1080,
     1580
-  ],
-  "revision": "21fb0bd21d8bc68cfadf76fe9d9b66460c65888fd558432847a7f668980de0e8"
+  ]
 }
