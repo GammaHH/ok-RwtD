@@ -21,6 +21,8 @@ class FarmWorkspace:
         self.dashboard_turn=None
         self.cleanup=None
         self.closed=False
+        self.exit_request=None
+        self.exit_ready=False
         for owner in self.owners.values():
             if owner is not None:
                 owner._native_workspace=self
@@ -32,11 +34,23 @@ class FarmWorkspace:
         self.cached = {}
         self.refresh()
 
-    def enqueue(self, request_id, command, payload):
-        if not isinstance(request_id,str) or not request_id or len(request_id)>100 or command not in {'switch','farm_start','farm_stop','farm_save'} or not isinstance(payload,dict):
+    def enqueue_remote(self,service,job,canvas_id=None):
+        command='farm_start' if job['command']=='farm_start' else 'farm_module'
+        return self.enqueue('discord:'+job['id'],command,{},_remote=(service,job,canvas_id))
+
+    def enqueue_remote_exit(self,service,job,owner):
+        return self.enqueue('discord:'+job['id'],'task_exit',{},_remote=(service,job,owner))
+
+    def enqueue(self, request_id, command, payload, *, _remote=None):
+        commands={'switch','farm_start','farm_stop','farm_save'}
+        if _remote is not None:
+            commands.update({'farm_module','task_exit'})
+        if not isinstance(request_id,str) or not request_id or len(request_id)>100 or command not in commands or not isinstance(payload,dict):
             raise ValueError('Invalid workspace command')
+        if _remote is None and request_id.startswith('discord:'):
+            raise ValueError('Reserved workspace request ID')
         with self.lock:
-            if self.closed or self.pending_handoff:
+            if self.closed or self.pending_handoff or self.exit_request is not None:
                 raise ValueError('TASK 正在交接或工作區已關閉，請等待目標任務就緒')
             if request_id in self.results:
                 return copy.deepcopy(self.results[request_id])
@@ -47,7 +61,7 @@ class FarmWorkspace:
                 controller=getattr(self.task,'controller',None)
                 if controller:
                     controller.device_stop.set()
-            self.queue.append((request_id,command,copy.deepcopy(payload)))
+            self.queue.append((request_id,command,copy.deepcopy(payload),_remote))
             self.results[request_id]={'status':'QUEUED'}
             return {'status':'QUEUED','request_id':request_id}
 
@@ -72,8 +86,8 @@ class FarmWorkspace:
         return ''
 
     def dashboard_access(self, command):
-        if self.closed or self.pending_handoff:
-            raise ValueError('TASK 交接期間禁止操作')
+        if self.closed or self.pending_handoff or self.exit_request is not None:
+            raise ValueError('TASK 交接或退出期間禁止操作')
         if self.current!='dashboard':
             raise ValueError('請先停止並儲存目前功能，再切回 Dashboard。')
 
@@ -82,9 +96,12 @@ class FarmWorkspace:
             item=self.queue.popleft() if self.queue else None
         if not item:
             return
-        request_id,command,payload=item
+        request_id,command,payload,remote=item
         result={'status':'SUCCESS'}
         try:
+            if remote is not None:
+                service,job,remote_value=remote
+                service.check_pending(job)
             if command=='switch':
                 if set(payload)!={'source','target'} or payload['source']!=self.current or payload['target'] not in self.owners:
                     raise ValueError('Workspace changed; refresh before switching')
@@ -112,9 +129,24 @@ class FarmWorkspace:
                 self.pending_handoff=(request_id,payload['target'])
                 self.refresh()
                 return
+            elif command=='task_exit':
+                owner=remote_value
+                if self.owners.get(self.current) is not owner or owner.executor.current_task is not owner:
+                    raise ValueError('工作區任務已變更；未退出')
+                if getattr(owner,'exit_after_task',False) or owner.config.get('Exit After Task',False):
+                    raise ValueError('目前任務設定完成後退出 OK，請在電腦端關閉該選項')
+                reason=self.blocked()
+                if reason:
+                    raise ValueError(reason)
+                with self.lock:
+                    if self.queue or any(t is not owner and (getattr(t,'enabled',False) or getattr(t,'running',False))
+                                         for t in owner.executor.onetime_tasks):
+                        raise ValueError('仍有工作排隊，請等待完成後再退出')
+                    self.exit_request=(service,job)
+                return
             elif self.current!='farm' or self.task is None:
                 raise ValueError('請先切換到 FARM')
-            elif command=='farm_start':
+            elif command in {'farm_start','farm_module'}:
                 if payload or self.running:
                     raise ValueError('FARM 已執行或參數無效')
                 if self.task.executor.current_task is not self.task or not self.task.enabled:
@@ -122,11 +154,25 @@ class FarmWorkspace:
                 reason=self.blocked()
                 if reason:
                     raise ValueError(reason)
-                self.running=True
-                self.service=self.task.run_service(lambda:self.running and self.task.enabled)
-                next(self.service)
-                self.host.manual.decision_store.execution_locked=True
-                self.host.manual.decision_store.input_locked=True
+                if remote is not None and any(
+                        t is not self.task and (getattr(t,'enabled',False) or getattr(t,'running',False))
+                        for t in self.task.executor.onetime_tasks):
+                    raise ValueError('另一個原生 TASK 正在執行或排隊')
+                if command=='farm_module':
+                    if not service.run_module_job(self.task,job):
+                        result={'status':'FAILED','reason':'模組未完成'}
+                else:
+                    self.running=True
+                    self.service=self.task.run_service(lambda:self.running and self.task.enabled)
+                    if remote is not None:
+                        self.task._discord_canvas_id=remote_value
+                    try:
+                        next(self.service)
+                    finally:
+                        if remote is not None:
+                            self.task._discord_canvas_id=None
+                    self.host.manual.decision_store.execution_locked=True
+                    self.host.manual.decision_store.input_locked=True
             elif command=='farm_stop':
                 if payload:
                     raise ValueError('Stop takes no parameters')
@@ -163,7 +209,19 @@ class FarmWorkspace:
         except Exception as exc:
             result={'status':'FAILED','reason':str(exc)}
             if command=='farm_start' and (self.running or self.service is not None):
-                self.close_service()
+                try:
+                    self.close_service()
+                except Exception as cleanup_error:
+                    if remote is None:
+                        raise
+                    result={'status':'FAILED','reason':'FARM 啟動清理失敗：'+type(cleanup_error).__name__}
+        if remote is not None:
+            if command=='farm_start':
+                service.finish_workspace_start(job,result)
+            elif command=='task_exit':
+                service.mailbox.finish(job,{'status':'FAILED','message':result['reason']})
+            elif not job['future'].done():
+                service.mailbox.finish(job,{'status':'FAILED','message':result.get('reason') or '模組未完成'})
         with self.lock:
             self.results[request_id]=result
             while len(self.results)>100:
@@ -226,6 +284,8 @@ class FarmWorkspace:
                 if view=='statistics' and self.statistics.closing.is_set():
                     break
                 self.process_next()
+                if self.exit_request is not None:
+                    break
                 if self.pending_handoff:
                     break
                 if view=='dashboard':
@@ -249,7 +309,15 @@ class FarmWorkspace:
         except BaseException:
             self.shutdown()
             raise
-        self.shutdown()
+        try:
+            self.shutdown()
+        except Exception as exc:
+            if self.exit_request is not None:
+                service,job=self.exit_request
+                service.mailbox.finish(job,{'status':'FAILED','message':'工作區清理失敗：'+type(exc).__name__})
+            raise
+        if self.exit_request is not None:
+            self.exit_ready=True
 
     def shutdown(self):
         if self.closed:
@@ -258,6 +326,18 @@ class FarmWorkspace:
         try:
             self.close_service()
         finally:
+            with self.lock:
+                pending=list(self.queue)
+                self.queue.clear()
+            for _,command,_,remote in pending:
+                if remote is None:
+                    continue
+                service,job,_=remote
+                result={'status':'FAILED','reason':'工作區已關閉；指令未執行'}
+                if command=='farm_start':
+                    service.finish_workspace_start(job,result)
+                else:
+                    service.mailbox.finish(job,{'status':'FAILED','message':result['reason']})
             for owner in self.owners.values():
                 if owner is not None and getattr(owner,'_native_workspace',None) is self:
                     owner._native_workspace=None

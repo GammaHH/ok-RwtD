@@ -27,7 +27,6 @@ class RwtdDiscordCaptureTask(RwtdControlDashboardTask,TriggerTask):
             if job['future'].done() or service.mailbox.clock()>=job['expires']:
                 raise ValueError('截圖指令已逾時')
             service.capture(self,job)
-            return True
         except Exception as exc:
             service.mailbox.finish(job,{'status':'FAILED','message':'截圖失敗：'+type(exc).__name__})
-            return False
+        return False  # Let OK release the native TriggerTask owner after a read-only capture.

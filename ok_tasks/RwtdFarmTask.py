@@ -249,12 +249,12 @@ class RwtdFarmTask(RwtdControlDashboardTask):
             self.module_progress[key] = completed+result.get('completed_step_index',advanced)
         return result
 
-    def execute_remote_module(self, selected, runs):
-        """Only RemoteControl.owner_tick calls this on the native device owner."""
+    def execute_remote_module(self, selected, runs, *, loop_settings=None):
+        """Run a saved module on the native device owner."""
         import threading
         from src.rwtd.android_core.workflow_model import resolve_step
         if self.controller.owner != threading.get_ident() or self.controller.device_stop.is_set():
-            raise ValueError('遠端模組必須由有效的 FARM 操作執行端執行')
+            raise ValueError('遠端模組必須由有效的原生操作執行端執行')
         if type(runs) is not int or not 1<=runs<=100:
             raise ValueError('執行次數須為 1～100')
         current=self.manual.store.get(selected['id'])
@@ -265,10 +265,35 @@ class RwtdFarmTask(RwtdControlDashboardTask):
         result=self.manual.execute_canvas_steps(steps,current['id'],current['revision'],
             self.controller.device_stop,request={'task_id':'DiscordModule','node':'DiscordModule',
                 'preempt_operations':True,'definition':{'repeat_runs':runs}},
-            loop_settings=self._owner.runtime.graph['settings'])
+            loop_settings=self._owner.runtime.graph['settings'] if loop_settings is None else loop_settings)
         self.log_info('RWTD_DC_MODULE_DONE '+json.dumps({'module':current['id'],
             'status':result.get('status'),'action_completed':result.get('action_completed')}))
         return result
+
+    def run_discord_module(self,selected,runs):
+        """Use the native FARM task for one saved module with no active schedule."""
+        from src.rwtd.android_core.failure_evidence import FailureEvidence
+        self.root=Path(__file__).resolve().parents[1]
+        if self.executor.current_task is not self or not self.enabled:
+            raise ValueError('遠端模組尚未取得原生 TASK 操作權')
+        with acquire(self.root,self):
+            previous=(self.controller,getattr(self,'manual',None),
+                      getattr(self,'monitor',None),getattr(self,'failure_evidence',None))
+            manual=ManualDeviceTests(self,self.root)
+            controller=SimulationController(manual_handler=manual.handle,allow_manual=True,
+                                            definitions=[],allow_simulation=False)
+            controller.mode='Manual Device Test'
+            controller.manual_confirmation_only=True
+            controller._owned()
+            self.controller,self.manual=controller,manual
+            try:
+                self.monitor=get_monitor(self.root)
+                self.failure_evidence=FailureEvidence(self.root)
+                return self.execute_remote_module(selected,runs,
+                                                  loop_settings={'max_cycles':1,'round_wait_seconds':1})
+            finally:
+                try:controller.close()
+                finally:self.controller,self.manual,self.monitor,self.failure_evidence=previous
 
     def _effect(self, payload):
         effect_started=timing_start(self)
@@ -430,6 +455,15 @@ class RwtdFarmTask(RwtdControlDashboardTask):
 
     def run(self):
         from src.rwtd.discord_control import current
+        job=getattr(self,'_discord_module_job',None)
+        if job is not None:
+            try:
+                remote=current()
+                if remote is not None:
+                    remote.run_module_job(self,job)
+            finally:
+                self._discord_module_job=None
+            return
         try:
             workspace=getattr(self,'_native_workspace',None)
             if workspace is not None:

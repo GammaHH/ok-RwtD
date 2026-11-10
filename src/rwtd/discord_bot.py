@@ -83,6 +83,12 @@ def start_bot(service,settings):
     @client.tree.command(name='screenshot',description='由 OK 取得手機最新截圖')
     async def screenshot(interaction:discord.Interaction):await execute(interaction,'screenshot')
 
+    task_group=app_commands.Group(name='task',description='控制目前的 RwtD 工作區任務')
+    @task_group.command(name='exit',description='退出已停止的 RwtD 工作區並捨棄未儲存草稿；OK 保持開啟')
+    async def task_exit(interaction:discord.Interaction):
+        await execute(interaction,'task_exit')
+    client.tree.add_command(task_group)
+
     farm=app_commands.Group(name='farm',description='控制現有 OK FARM 任務')
     @farm.command(name='start',description='啟動 FARM，可選指定已儲存 Canvas')
     async def farm_start(interaction:discord.Interaction,canvas:str=''):
@@ -104,7 +110,7 @@ def start_bot(service,settings):
     async def stop_after(interaction:discord.Interaction):await execute(interaction,'farm_stop_after_round')
     client.tree.add_command(farm)
 
-    module=app_commands.Group(name='module',description='在執行中的 FARM 排隊或插隊執行模組')
+    module=app_commands.Group(name='module',description='排隊、插隊或單獨執行已儲存模組')
 
     async def module_choices(interaction:discord.Interaction,current:str):
         if not permitted(interaction):return []
@@ -123,12 +129,12 @@ def start_bot(service,settings):
     async def module_list(interaction:discord.Interaction):
         await execute(interaction,'module_list')
 
-    @module.command(name='queue',description='等目前節點完成後執行模組；完成後接續 FARM')
+    @module.command(name='queue',description='排隊執行已儲存模組；FARM 停止時單獨執行')
     async def module_queue(interaction:discord.Interaction,module:str,runs:app_commands.Range[int,1,100]=1):
         await execute(interaction,'module_queue',{'module':module,'runs':runs})
     module_queue.autocomplete('module')(module_choices)
 
-    @module.command(name='preempt',description='安全中止目前節點剩餘動作並插入模組；失敗則停止 FARM')
+    @module.command(name='preempt',description='優先執行已儲存模組；FARM 停止時單獨執行')
     async def module_preempt(interaction:discord.Interaction,module:str,runs:app_commands.Range[int,1,100]=1):
         await execute(interaction,'module_preempt',{'module':module,'runs':runs})
     module_preempt.autocomplete('module')(module_choices)

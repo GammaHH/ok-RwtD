@@ -11,7 +11,8 @@ from contextlib import contextmanager
 GAME_PACKAGE = 'net.room6.horizon'
 
 
-def _selected_android(manager):
+def selected_android(manager):
+    """Return the selected Android address and its existing ADB connection."""
     preferred = manager.get_preferred_device() or {}
     if preferred.get('device') not in {'adb', 'emulator'}:
         return None, None
@@ -24,7 +25,7 @@ def _selected_android(manager):
 
 def game_process_status(manager):
     """Return (device address, alive, foreground package). Unknown fields are None."""
-    address, device = _selected_android(manager)
+    address, device = selected_android(manager)
     if device is None:
         return address, None, None
     command = (f'pidof {GAME_PACKAGE} >/dev/null; echo RWTD_PID_STATUS=$?; '
@@ -33,7 +34,7 @@ def game_process_status(manager):
         output = device.shell(command, timeout=3)
     except Exception:
         return address, None, None
-    if _selected_android(manager) != (address, device) or not isinstance(output, str):
+    if selected_android(manager) != (address, device) or not isinstance(output, str):
         return address, None, None
     markers = re.findall(r'^RWTD_PID_STATUS=(\d+)\s*$', output, re.M)
     alive = {'0': True, '1': False}.get(markers[0]) if len(markers) == 1 else None
@@ -55,7 +56,7 @@ def restore_game_foreground(manager, address, cancelled, wait, clock=time.monoto
     """Only called by the FARM owner, after outstanding operations return."""
     if cancelled() or not address:
         return False
-    selected, device = _selected_android(manager)
+    selected, device = selected_android(manager)
     if selected != address or device is None:
         return False
     current, alive, foreground = game_process_status(manager)
@@ -63,11 +64,11 @@ def restore_game_foreground(manager, address, cancelled, wait, clock=time.monoto
         return False
     if alive and foreground == GAME_PACKAGE:
         return True
-    if _selected_android(manager) != (address, device):
+    if selected_android(manager) != (address, device):
         return False
     device.shell(f'monkey -p {GAME_PACKAGE} -c android.intent.category.LAUNCHER 1', timeout=5)
     deadline = clock() + 30
-    while not cancelled() and clock() < deadline and _selected_android(manager) == (address, device):
+    while not cancelled() and clock() < deadline and selected_android(manager) == (address, device):
         current, alive, foreground = game_process_status(manager)
         if current == address and alive is True and foreground == GAME_PACKAGE:
             return not cancelled()

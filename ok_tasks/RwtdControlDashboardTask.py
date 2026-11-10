@@ -1156,17 +1156,17 @@ class RwtdControlDashboardTask(BaseTask):
             bridge.command_access=workspace.dashboard_access
             if roi_bridge:
                 def roi_access(command):
-                    if workspace.closed or workspace.pending_handoff or workspace.current!='roi' or workspace.running:
+                    if workspace.closed or workspace.pending_handoff or workspace.exit_request is not None or workspace.current!='roi' or workspace.running:
                         raise ValueError('請先停止並儲存目前功能，再切到 ROI 總覽。')
                 roi_bridge.command_access=roi_access
             if calibration_bridge:
                 def calibration_access(command):
-                    if workspace.closed or workspace.pending_handoff or workspace.current!='calibration' or workspace.running:
+                    if workspace.closed or workspace.pending_handoff or workspace.exit_request is not None or workspace.current!='calibration' or workspace.running:
                         raise ValueError('請先停止並儲存目前功能，再切到解析度對照。')
                 calibration_bridge.command_access=calibration_access
             if statistics_bridge:
                 def statistics_access(command):
-                    if workspace.closed or workspace.pending_handoff or workspace.current!='statistics':
+                    if workspace.closed or workspace.pending_handoff or workspace.exit_request is not None or workspace.current!='statistics':
                         raise ValueError('請先停止並儲存目前功能，再切到輪次統計。')
                 statistics_bridge.command_access=statistics_access
             bridge.start()

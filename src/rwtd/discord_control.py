@@ -1,12 +1,13 @@
-"""Bounded Discord command mailbox. No Discord, Qt or device imports here."""
+"""Bounded Discord command mailbox and native command dispatch."""
 import copy
 import threading
 import time
 from collections import deque
 from concurrent.futures import Future
+from datetime import datetime, timezone
 
 
-COMMANDS = {'status','screenshot','farm_start','farm_pause','farm_resume','farm_stop',
+COMMANDS = {'status','screenshot','task_exit','farm_start','farm_pause','farm_resume','farm_stop',
             'module_list','module_queue','module_preempt',
             'farm_stop_after_round','activity_list','activity_queue','trigger_status','diagnosis_latest'}
 _service = None
@@ -77,14 +78,16 @@ def select_canvas(catalog, value):
 
 
 class RemoteControl:
-    """GUI dispatches lifecycle; the owning TASK drains device/runtime commands."""
+    """The TASK owns control and input; FARM screenshots use a read-only worker."""
     def __init__(self, app, root, mailbox=None):
         self.app,self.root=app,root
         self.mailbox=mailbox or ControlMailbox()
         self.owner_queue=deque()
+        self.screenshot_worker=None
         self.cached={'status':'IDLE','message':'OK 已開啟，FARM 尚未啟動'}
         self.lock=threading.RLock()
         self.start_job=self.stop_job=None
+        self.exit_job=None
         self.catalog=[]
         self.module_catalog=[]
         self.next_catalog_refresh=0
@@ -118,42 +121,120 @@ class RemoteControl:
     def finish(self,job,message,**extra):
         self.mailbox.finish(job,dict(status='COMPLETED',message=message,**extra))
 
+    def check_pending(self,job):
+        if job['future'].done() or self.mailbox.clock()>=job['expires']:
+            raise ValueError('指令已取消或逾時；未執行')
+
+    def idle_workspace(self,task,executor):
+        workspace=getattr(task,'_native_workspace',None)
+        owns_workspace=(workspace is not None and workspace.current=='farm'
+                        and executor.current_task is task)
+        busy=next((item for item in executor.onetime_tasks
+                   if (item is not task or not owns_workspace)
+                   and (getattr(item,'enabled',False) or getattr(item,'running',False))),None)
+        if busy is None and not owns_workspace:
+            busy=executor.current_task
+        if busy is not None:
+            name=getattr(busy,'name',type(busy).__name__)
+            raise ValueError('目前任務占用：'+name+'；請先停止、儲存並退出該任務')
+        if workspace is not None and not owns_workspace:
+            raise ValueError('請先關閉現有工作區 TASK')
+        if any(getattr(item,'remote_job',None) for item in getattr(executor,'trigger_tasks',[])):
+            raise ValueError('請等待目前排隊的截圖完成')
+        return workspace
+
+    def finish_workspace_start(self,job,result):
+        if result['status']=='SUCCESS':
+            self.finish(job,'FARM 已啟動')
+        else:
+            self.mailbox.finish(job,{'status':'FAILED','message':result.get('reason') or 'FARM 啟動失敗'})
+        self.start_job=None
+
+    def run_module_job(self,task,job):
+        try:
+            self.check_pending(job)
+            result=task.run_discord_module(job['module'],job['payload'].get('runs',1))
+            if not result.get('action_completed'):
+                raise ValueError(result.get('failure_reason') or '模組未完成，請檢查畫面')
+            self.finish(job,'模組已完成，FARM 維持停止：'+job['module']['name'],
+                        data={'result_status':result.get('status')})
+        except Exception as exc:
+            self.mailbox.finish(job,{'status':'FAILED','message':str(exc)[:500] or type(exc).__name__})
+            return False
+        return True
+
     def gui_tick(self):
         task=self.farm_task()
+        executor=getattr(self.app,'task_executor',None)
+        if self.exit_job is not None:
+            exit_job,owner,workspace=self.exit_job
+            if exit_job['future'].done():
+                self.exit_job=None
+            elif (workspace.exit_ready and getattr(executor,'current_task',None) is not owner
+                  and not owner.running and not owner.enabled):
+                self.finish(exit_job,'工作區任務已退出；OK 仍開啟')
+                self.exit_job=None
+            elif self.mailbox.clock()>=exit_job['expires']:
+                self.mailbox.finish(exit_job,{'status':'FAILED','message':'等待工作區退出逾時，請用 /status 查詢'})
+                self.exit_job=None
+        native_idle=(getattr(executor,'current_task',None) is not task
+                     and not getattr(task,'running',False) and not getattr(task,'enabled',False))
+        module_job=getattr(task,'_discord_module_job',None)
+        if module_job is not None and native_idle:
+            task._discord_module_job=None
+            self.mailbox.finish(module_job,{'status':'FAILED','message':'原生 TASK 已取消；模組未執行'})
         if self.mailbox.clock()>=self.next_catalog_refresh:
             self.next_catalog_refresh=self.mailbox.clock()+10
-            executor=getattr(self.app,'task_executor',None)
             if executor and executor.current_task is None:
                 self.refresh_catalog()
         if self.stop_job and not getattr(task,'_discord_running',False):
-            self.finish(self.stop_job,'FARM 已停止')
-            self.stop_job=None
+            workspace=getattr(task,'_native_workspace',None)
+            workspace_idle=(workspace is not None and not workspace.running
+                            and workspace.service is None)
+            if workspace_idle or native_idle:
+                self.finish(self.stop_job,'FARM 已停止')
+                self.stop_job=None
         job=self.mailbox.claim()
         if not job:return
         try:
             cmd=job['command'];payload=job['payload']
-            executor=getattr(self.app,'task_executor',None)
             if not executor or task is None:raise ValueError('OK 任務尚未就緒')
             running=getattr(task,'_discord_running',False)
             if cmd=='status':
                 state=self.snapshot()
                 if not running:state={'status':'IDLE','message':'FARM 未執行','task':type(executor.current_task).__name__ if executor.current_task else None}
                 self.finish(job,'目前狀態',data=state)
+            elif cmd=='task_exit':
+                if payload:raise ValueError('退出指令不接受參數')
+                if self.exit_job is not None:
+                    raise ValueError('工作區已排隊退出，請等待完成')
+                if running or self.start_job:
+                    raise ValueError('請先用 /farm stop 停止 FARM，再退出工作區')
+                owner=executor.current_task
+                if owner is None:
+                    self.finish(job,'目前沒有執行中的工作區任務')
+                    return
+                workspace=getattr(owner,'_native_workspace',None)
+                if workspace is None or workspace.owners.get(workspace.current) is not owner:
+                    raise ValueError('目前任務不支援遠端退出，請在 OK 停止該任務')
+                workspace.enqueue_remote_exit(self,job,owner)
+                self.exit_job=(job,owner,workspace)
             elif cmd=='farm_start':
                 if set(payload)-{'canvas'}:raise ValueError('啟動參數無效')
+                if self.exit_job is not None:raise ValueError('請等待工作區退出完成')
                 if running or self.start_job:raise ValueError('FARM 已在執行或啟動中')
-                if any(getattr(t,'enabled',False) or getattr(t,'running',False)
-                       for t in executor.onetime_tasks) or executor.current_task is not None:
-                    raise ValueError('請先手動停止、儲存並退出目前 Dashboard／ROI／其他 TASK')
-                if getattr(task,'_native_workspace',None):raise ValueError('請先關閉現有工作區 TASK')
-                if any(getattr(t,'remote_job',None) for t in getattr(executor,'trigger_tasks',[])):
-                    raise ValueError('請等待目前排隊的截圖完成')
+                workspace=self.idle_workspace(task,executor)
                 self.refresh_catalog()
                 value=payload.get('canvas')
-                if value:
-                    row=select_canvas(self.catalog,value)
-                    task._discord_canvas_id=row['id']
-                else:task._discord_canvas_id=None
+                canvas_id=select_canvas(self.catalog,value)['id'] if value else None
+                if workspace is not None:
+                    self.start_job=job
+                    try:workspace.enqueue_remote(self,job,canvas_id)
+                    except Exception:
+                        self.start_job=None
+                        raise
+                    return
+                task._discord_canvas_id=canvas_id
                 task._discord_start_job=job
                 self.start_job=job
                 try:
@@ -175,7 +256,6 @@ class RemoteControl:
                 self.refresh_catalog()
                 self.finish(job,'可執行模組',data=self.module_catalog)
             elif cmd in {'module_queue','module_preempt'}:
-                if not running:raise ValueError('請先啟動 FARM，再插入模組')
                 if set(payload)-{'module','runs'}:raise ValueError('模組參數無效')
                 runs=payload.get('runs',1)
                 if type(runs) is not int or not 1<=runs<=100:raise ValueError('執行次數須為 1～100')
@@ -184,23 +264,44 @@ class RemoteControl:
                 if len(matches)!=1:raise ValueError('模組不存在或同名；請從模組選單選取')
                 row=matches[0]
                 job['module']=copy.deepcopy(row)
+                if not running:
+                    if self.exit_job is not None:raise ValueError('請等待工作區退出完成')
+                    if self.start_job:raise ValueError('FARM 正在啟動')
+                    workspace=self.idle_workspace(task,executor)
+                    if workspace is not None:
+                        workspace.enqueue_remote(self,job)
+                    else:
+                        task._discord_module_job=job
+                        try:
+                            task.enable()
+                            executor.start()
+                        except Exception:
+                            task._discord_module_job=None
+                            task.disable()
+                            raise
+                    return
                 with self.lock:
                     if cmd=='module_preempt':
                         index=next((i for i,item in enumerate(self.owner_queue)
                                     if item['command']!='module_preempt'),len(self.owner_queue))
                         self.owner_queue.insert(index,job)
                     else:self.owner_queue.append(job)
+            elif cmd=='screenshot':
+                if self.screenshot_worker is not None and self.screenshot_worker.is_alive():
+                    raise ValueError('已有截圖請求處理中')
+                if running:
+                    self.start_farm_screenshot(executor.device_manager,task.config.get('Display Size','Auto'),job)
+                else:
+                    if any(getattr(t,'enabled',False) or getattr(t,'running',False) for t in executor.onetime_tasks) or executor.current_task:
+                        raise ValueError('其他 TASK 使用手機中；請先停止並退出')
+                    capture=next((t for t in executor.trigger_tasks if type(t).__name__=='RwtdDiscordCaptureTask'),None)
+                    if capture is None:raise ValueError('遠端截圖 TASK 未註冊')
+                    if not capture.enabled:raise ValueError('請先在 OK 啟用 Discord 截圖 TriggerTask')
+                    if capture.remote_job is not None:raise ValueError('已有截圖請求等待執行')
+                    capture.remote_job=job
+                    executor.start()
             elif running:
                 with self.lock:self.owner_queue.append(job)
-            elif cmd=='screenshot':
-                if any(getattr(t,'enabled',False) or getattr(t,'running',False) for t in executor.onetime_tasks) or executor.current_task:
-                    raise ValueError('其他 TASK 使用手機中；請先停止並退出')
-                capture=next((t for t in executor.trigger_tasks if type(t).__name__=='RwtdDiscordCaptureTask'),None)
-                if capture is None:raise ValueError('遠端截圖 TASK 未註冊')
-                if not capture.enabled:raise ValueError('請先在 OK 啟用 Discord 截圖 TriggerTask')
-                if capture.remote_job is not None:raise ValueError('已有截圖請求等待執行')
-                capture.remote_job=job
-                executor.start()
             else:raise ValueError('FARM 未執行，無可控制的執行流程')
         except Exception as exc:
             self.mailbox.finish(job,{'status':'FAILED','message':str(exc)[:500]})
@@ -256,14 +357,14 @@ class RemoteControl:
                     task.farm.remote_stop_after_round=True
                     self.finish(job,'已設定本次主 FARM 輪次完成後停止，屆時不插入活動')
                 elif cmd in {'module_queue','module_preempt'}:
-                    if task._discord_paused:raise ValueError('FARM 已暫停；請先恢復再執行模組')
                     if not task._activity_ready():
                         with self.lock:self.owner_queue.appendleft(job)
                         return False
                     try:
                         result=task.execute_remote_module(job['module'],job['payload'].get('runs',1))
                         if result.get('action_completed'):
-                            self.finish(job,'模組已完成，FARM 接續原流程：'+job['module']['name'],
+                            state='維持暫停' if task._discord_paused else '接續原流程'
+                            self.finish(job,'模組已完成，FARM '+state+'：'+job['module']['name'],
                                         data={'module':job['module']['id'],'runs':job['payload'].get('runs',1),
                                               'result_status':result.get('status')})
                         else:
@@ -278,12 +379,6 @@ class RemoteControl:
                         task.controller.activity_inline_observers=task._discord_paused
                         task.controller._invalidate_trigger_frames()
                     return False  # The owner boundary was occupied by this module.
-                elif cmd=='screenshot':
-                    if not task._activity_ready():
-                        with self.lock:self.owner_queue.appendleft(job)
-                        return False
-                    try:self.capture(task,job)
-                    finally:task.controller.activity_inline_observers=task._discord_paused
                 elif cmd=='activity_queue':
                     task.farm.queue_activity(job['payload'].get('activity'),job['payload'].get('runs',1))
                     self.finish(job,'活動已加入待辦；等待主 FARM 安全輪次交接')
@@ -294,7 +389,7 @@ class RemoteControl:
                 elif cmd=='diagnosis_latest':self.diagnosis(job)
                 else:raise ValueError('不支援的執行期指令')
             except Exception as exc:
-                if job['command'] in {'screenshot','module_queue','module_preempt'}:
+                if job['command'] in {'module_queue','module_preempt'}:
                     task.controller.activity_inline_observers=task._discord_paused
                 self.mailbox.finish(job,{'status':'FAILED','message':str(exc)[:500]})
         owner=task._owner
@@ -306,18 +401,66 @@ class RemoteControl:
                          'reason':owner.reason,'elapsed_seconds':round(max(0,owner.clock()-owner.round_started_at))}
         return not task._discord_paused
 
+    def start_farm_screenshot(self,manager,display_size,job):
+        from .android_core.watchdog import selected_android
+        selection=selected_android(manager)
+        if selection[1] is None:
+            raise ValueError('目前沒有已連線的 Android 裝置')
+        self.screenshot_worker=threading.Thread(
+            target=self.capture_farm_frame,args=(manager,selection,display_size,job),
+            name='RwtDDiscordScreenshot',daemon=True)
+        self.screenshot_worker.start()
+
+    def capture_farm_frame(self,manager,selection,display_size,job):
+        from .android_core.screen_geometry import ScreenGeometry,expected_size
+        from .android_core.watchdog import selected_android
+
+        try:
+            import cv2
+            import numpy as np
+            if job['future'].done():
+                return
+            if self.mailbox.clock()>=job['expires']:
+                raise ValueError('截圖指令已逾時')
+            if selected_android(manager)!=selection:
+                raise ValueError('Android 裝置已變更')
+            # Use a separate shell connection without the DeviceManager error
+            # handler, which can disconnect the FARM device on capture failure.
+            raw=selection[1].shell('screencap -p',encoding=None,timeout=10)
+            captured=datetime.now(timezone.utc).isoformat()
+            frame=cv2.imdecode(np.frombuffer(raw,dtype=np.uint8),cv2.IMREAD_COLOR) if raw else None
+            if frame is None:
+                raise ValueError('Android 截圖為空或無法解碼')
+            height,width=frame.shape[:2]
+            expected=expected_size(display_size)
+            if expected is not None and expected!=(width,height):
+                raise ValueError('Android 截圖尺寸與 Display Size 設定不符')
+            frame=ScreenGeometry(width,height).normalize(frame)
+            result=self.screenshot_result(frame,captured)
+            if selected_android(manager)!=selection:
+                raise ValueError('Android 裝置已變更')
+        except Exception as exc:
+            reason=str(exc) if type(exc) is ValueError else type(exc).__name__
+            result={'status':'FAILED','message':'截圖失敗：'+reason[:160]}
+        with self.mailbox.lock:
+            if not job['future'].done():
+                self.mailbox.finish(job,result)
+
     def capture(self,task,job):
-        import cv2
-        from datetime import datetime,timezone
-        backend,device=task.manual_backend()
+        backend,_=task.manual_backend()
         frame=backend.get_frame()
         task.validate_native_frame(frame)
         captured=datetime.now(timezone.utc).isoformat()
+        self.mailbox.finish(job,self.screenshot_result(frame,captured))
+
+    @staticmethod
+    def screenshot_result(frame,captured):
+        import cv2
         ok,png=cv2.imencode('.png',frame)
         if not ok:raise ValueError('手機截圖編碼失敗')
         data=png.tobytes()
         if len(data)>8*1024*1024:raise ValueError('截圖超過 8 MiB')
-        self.finish(job,'手機最新畫面；擷取時間：'+captured,png=data)
+        return {'status':'COMPLETED','message':'手機最新畫面；擷取時間：'+captured,'png':data}
 
     def diagnosis(self,job):
         import json
