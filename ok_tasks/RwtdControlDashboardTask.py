@@ -753,6 +753,24 @@ class RwtdControlDashboardTask(BaseTask):
         if node['kind'] == 'exclusion':
             frame, frame_id = self.trigger_frame(backend,device,payload)
             self.validate_native_frame(frame)
+            if node.get('exclusion_scope') == 'next':
+                from src.rwtd.android_core.canvas_exclusion import color_region
+                mode = node.get('exclusion_mode', 'coco')
+                if mode in {'color', 'coco_or_color'}:
+                    regions = [color_region(node, frame)]
+                else:
+                    regions = []
+                if mode in {'coco', 'coco_or_color'}:
+                    matches = self.detect_manual_features(frame, [node['feature']], node.get('threshold', .8), coco_roi=node.get('roi'))
+                    regions += [dict(bbox=h['bbox'], feature=node['feature'], confidence=h['confidence'])
+                               for h in matches if h.get('feature') == node['feature'] and h.get('matched')
+                               and h.get('confidence', 0) >= node.get('threshold', .8)]
+                    if not matches:
+                        return {'verified': False}
+                _, current_device = self.manual_backend()
+                if stop.is_set() or current_device != device:
+                    return {'verified': False}
+                return dict(verified=True, frame_id=frame_id, regions=regions, source='REAL_ANDROID')
             matches = self.detect_manual_features(frame,[node['feature']],node.get('threshold',.8))
             _, current_device = self.manual_backend()
             if stop.is_set() or current_device != device:

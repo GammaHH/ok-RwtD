@@ -70,7 +70,7 @@ class DashboardBridge:
                 path = urlsplit(self.path).path
                 if not self.checked(authenticated=path.startswith("/api/")):
                     return
-                if path in {"/", "/workspace_tabs.js", "/farm_workspace.js", "/roi_overview.js", "/dashboard.js", "/color_preview.js", "/diagnostics.js", "/canvas_model.js", "/canvas_view.js", "/workflow_ui.js", "/step_settings.js", "/target_editor.js", "/decision_editor.js", "/test_context.js", "/roi_editor.js", "/gesture_editor.js", "/dashboard.css"}:
+                if path in {"/", "/workspace_tabs.js", "/farm_workspace.js", "/roi_overview.js", "/dashboard.js", "/color_preview.js", "/diagnostics.js", "/canvas_model.js", "/canvas_view.js", "/workflow_ui.js", "/step_settings.js", "/target_editor.js", "/decision_editor.js", "/exclusion_editor.js", "/test_context.js", "/roi_editor.js", "/gesture_editor.js", "/dashboard.css"}:
                     name = "index.html" if path == "/" else path[1:]
                     kind = "text/html; charset=utf-8" if path == "/" else "text/css; charset=utf-8" if path == "/dashboard.css" else "text/javascript; charset=utf-8"
                     if not (bridge.assets / name).is_file():

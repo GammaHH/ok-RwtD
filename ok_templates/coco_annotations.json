@@ -613,12 +613,12 @@
       "image_id": 11,
       "category_id": 31,
       "bbox": [
-        25,
-        508,
-        1028,
-        153
+        18,
+        675,
+        1018,
+        390
       ],
-      "area": 157284,
+      "area": 397020,
       "iscrowd": 0
     },
     {
@@ -1106,7 +1106,12 @@
       "id": 69,
       "image_id": 38,
       "category_id": 64,
-      "bbox": [494, 1681, 91, 90],
+      "bbox": [
+        494,
+        1681,
+        91,
+        90
+      ],
       "area": 8190,
       "iscrowd": 0
     },
@@ -1114,7 +1119,12 @@
       "id": 70,
       "image_id": 35,
       "category_id": 70,
-      "bbox": [46, 2177, 98, 100],
+      "bbox": [
+        46,
+        2177,
+        98,
+        100
+      ],
       "area": 9800,
       "iscrowd": 0
     }
@@ -1436,6 +1446,11 @@
       "supercategory": ""
     },
     {
+      "id": 64,
+      "name": "debug_leave3",
+      "supercategory": ""
+    },
+    {
       "id": 65,
       "name": "no_gem",
       "supercategory": ""
@@ -1458,11 +1473,6 @@
     {
       "id": 69,
       "name": "expedition_icon",
-      "supercategory": ""
-    },
-    {
-      "id": 64,
-      "name": "debug_leave3",
       "supercategory": ""
     },
     {

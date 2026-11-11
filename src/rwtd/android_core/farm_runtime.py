@@ -458,7 +458,7 @@ class FarmRuntime:
             self.invalidate_observers()
         item = self.schedule.by_id[self.schedule.current]
         if item.get('type') == 'memory':
-            self.schedule.memory.update(copy.deepcopy(self.runtime.exclusion_regions))
+            self.schedule.memory.update(copy.deepcopy({k:v for k,v in self.runtime.exclusion_regions.items() if not v.get('target_node')}))
             self.schedule.memory_variables[item['id']] = copy.deepcopy({k:v for k,v in self.runtime.variables.items()
                 if isinstance(v,dict) and v.get('verified') is True})
         self.runtime.control('stop')
@@ -531,7 +531,7 @@ class FarmRuntime:
                             if route.get('chain',route['target']) != target]
         item = self.schedule.by_id[self.schedule.current]
         if item.get('type') == 'memory' and not self.handoff_pending:
-            self.schedule.memory.update(copy.deepcopy(self.runtime.exclusion_regions))
+            self.schedule.memory.update(copy.deepcopy({k:v for k,v in self.runtime.exclusion_regions.items() if not v.get('target_node')}))
             self.schedule.memory_variables[item['id']] = copy.deepcopy({k:v for k,v in self.runtime.variables.items()
                 if isinstance(v,dict) and v.get('verified') is True})
         self.runtime.control('stop')
@@ -759,7 +759,7 @@ class FarmRuntime:
                 self._leave()
             else:
                 if item.get('type')=='memory':
-                    self.schedule.memory.update(copy.deepcopy(self.runtime.exclusion_regions))
+                    self.schedule.memory.update(copy.deepcopy({k:v for k,v in self.runtime.exclusion_regions.items() if not v.get('target_node')}))
                     self.schedule.memory_variables[item['id']] = copy.deepcopy({k:v for k,v in self.runtime.variables.items()
                         if isinstance(v,dict) and v.get('verified') is True})
                 self._enter()

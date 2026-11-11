@@ -56,6 +56,7 @@ def validate_canvas(value, module_ids):
                     'share_guard_time_by_name'})
     allowed.update({'progress_exit_on_limit','input_source','end_step_id'})
     allowed.add('round_timing')
+    allowed.update({'exclusion_mode', 'exclusion_scope', 'exclusion_colors'})
     for n in nodes:
         if not isinstance(n, dict) or set(n) - (allowed | {'handoff_chain'}):
             raise ValueError("Unknown Canvas node fields")
@@ -69,6 +70,8 @@ def validate_canvas(value, module_ids):
         if n["id"] in by_id or n.get("kind") not in KINDS:
             raise ValueError("Invalid Canvas node identity/type")
         by_id[n["id"]] = n
+        if any(k in n for k in ('exclusion_mode', 'exclusion_scope', 'exclusion_colors')) and n['kind'] != 'exclusion':
+            raise ValueError('Exclusion fields belong to exclusion nodes')
         if 'suppress_failure_notification' in n and type(n['suppress_failure_notification']) is not bool:
             raise ValueError('失敗時不傳通知須為布林值')
         if 'unknown_no_retry' in n and (type(n['unknown_no_retry']) is not bool
@@ -107,9 +110,12 @@ def validate_canvas(value, module_ids):
                 from src.rwtd.android_core.workflow_model import validate_roi
                 validate_roi(n['roi'])
         if n['kind'] == 'exclusion':
-            identifier(n.get('feature'))
-            if not number(n.get('threshold', .8), .5, 1):
-                raise ValueError('Invalid exclusion threshold')
+            from .canvas_exclusion import validate as validate_exclusion
+            validate_exclusion(n)
+            if n.get('exclusion_mode', 'coco') in {'coco', 'coco_or_color'}:
+                identifier(n.get('feature'))
+                if not number(n.get('threshold', .8), .5, 1):
+                    raise ValueError('Invalid exclusion threshold')
         if n['kind'] == 'ocr_decision':
             from .canvas_ocr_decision import validate
             validate(n)
@@ -377,6 +383,7 @@ class CanvasRuntime:
             raise ValueError("Scheduler control requires a data object")
         if command == "stop":
             self.status, self.reason, self.pending_next = "STOPPED", "使用者停止排程", None
+            self.exclusion_regions = {k:v for k,v in self.exclusion_regions.items() if not v.get('target_node')}
             self.trigger_queue.clear()
             self.running_trigger = None
             self.pending_effect = None
@@ -437,6 +444,8 @@ class CanvasRuntime:
         self.condition_probe = None
         self.ocr_attempts.pop(self.cursor,None)
         edge = next(e for e in self.graph["edges"] if e["source"] == self.cursor and e["port"] == port)
+        from .canvas_exclusion import leave
+        leave(self, self.cursor)
         self.edge = edge["id"]
         self.completed.append(self.cursor)
         self.completed = self.completed[-200:]
@@ -774,6 +783,34 @@ class CanvasRuntime:
             elif n["kind"] == "manual":
                 self.status, self.waiting_kind = "WAITING_MANUAL", "node"
             elif n['kind'] == 'exclusion':
+                if n.get('exclusion_scope') == 'next':
+                    if n.get('exclusion_mode', 'coco') == 'roi':
+                        from .canvas_exclusion import remember
+                        remember(self, n, [{'bbox': list(n['roi']), 'feature': 'ROI'}])
+                        self._next('NEXT')
+                    elif self.source != 'simulation':
+                        self.pending_effect = copy.deepcopy(n)
+                    else:
+                        from .canvas_exclusion import remember
+                        if n.get('exclusion_mode', 'coco') in {'color', 'coco_or_color'}:
+                            self.status, self.reason = 'BLOCKED', '顏色禁區需實際畫面，模擬不推測'
+                            return
+                        sample = self.observations.get('features', {}).get(n['feature'])
+                        if not isinstance(sample, dict) or sample.get('verified') is not True:
+                            self.status, self.reason = 'BLOCKED', '禁止點擊區域 UNKNOWN'
+                            return
+                        regions = []
+                        if sample.get('detected') is True:
+                            if not number(sample.get('confidence'), n.get('threshold', .8), 1):
+                                self.status, self.reason = 'BLOCKED', '禁止點擊區域信心值無效'
+                                return
+                            regions = [{'bbox': sample.get('bbox'), 'feature': n['feature']}]
+                        elif sample.get('detected') is not False:
+                            self.status, self.reason = 'BLOCKED', '禁止點擊區域 UNKNOWN'
+                            return
+                        remember(self, n, regions)
+                        self._next('NEXT')
+                    return
                 if self.source != 'simulation' and n['id'] not in self.exclusion_regions:
                     self.pending_effect = copy.deepcopy(n)
                     return
@@ -944,6 +981,15 @@ class CanvasRuntime:
             return
         if node['kind'] == 'exclusion':
             from src.rwtd.android_core.workflow_model import validate_roi
+            if node.get('exclusion_scope') == 'next':
+                if (not isinstance(result, dict) or result.get('verified') is not True
+                        or not result.get('frame_id') or not isinstance(result.get('regions'), list)):
+                    self.status, self.reason = 'BLOCKED', '禁止點擊區域辨識無效；不送出 NEXT 操作'
+                    return
+                from .canvas_exclusion import remember
+                remember(self, node, result['regions'])
+                self._next('NEXT')
+                return
             if (isinstance(result,dict) and result.get('verified') is True and result.get('detected') is False):
                 if self._retry_unmet(node):
                     return

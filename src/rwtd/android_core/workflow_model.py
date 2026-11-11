@@ -29,6 +29,11 @@ def validate_roi(roi):
 def require_outside_exclusions(points, regions):
     """Reject touch points or continuous path segments intersecting remembered boxes."""
     for region in regions.values():
+        if 'pixel_mask' in region:
+            from .canvas_exclusion import mask_intersects
+            if mask_intersects(region, points):
+                raise ExclusionIntersection(points, region)
+            continue
         x, y, w, h = validate_roi(region['bbox'])
         for start, end in zip(points, points[1:] or points):
             low, high = 0., 1.

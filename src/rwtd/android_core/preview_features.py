@@ -14,7 +14,7 @@ def referenced_features(graph, modules):
             from src.rwtd.android_core.canvas_entry_guard import clauses
             found.update(c['feature'] for c in clauses(node['entry_guard']) if c['kind']=='coco')
         kind = node.get('kind')
-        if kind in {'coco', 'exclusion'} or (kind == 'guard' and node.get('feature')):
+        if kind == 'coco' or (kind == 'exclusion' and node.get('exclusion_mode', 'coco') in {'coco', 'coco_or_color'}) or (kind == 'guard' and node.get('feature')):
             if node.get('feature'):
                 found.add(node['feature'])
         if kind == 'ocr' and node.get('ocr_region') == 'coco' and node.get('ocr_feature'):

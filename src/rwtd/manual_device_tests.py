@@ -782,7 +782,8 @@ class ManualDeviceTests:
                             saved_three_point_path, record.get('workflow_module'), parameters.get('step_id'))
                 if name != 'WaitTest':
                     runtime = getattr(getattr(self.task,'controller',None),'canvas_runtime',None)
-                    regions = getattr(runtime,'exclusion_regions',{})
+                    from src.rwtd.android_core.canvas_exclusion import active_regions
+                    regions = active_regions(runtime)
                     if regions:
                         from src.rwtd.android_core.workflow_model import require_outside_exclusions
                         points = [[x,y]]
@@ -791,7 +792,21 @@ class ManualDeviceTests:
                                 points = effective_three_point_path
                             else:
                                 points.append([parameters['end_x'],parameters['end_y']])
-                        require_outside_exclusions(points,regions)
+                        try:
+                            require_outside_exclusions(points,regions)
+                        except Exception as exc:
+                            from src.rwtd.android_core.workflow_model import ExclusionIntersection
+                            if not batch or not isinstance(exc, ExclusionIntersection):
+                                raise
+                            repetition.update(status='SKIPPED', target=[x, y],
+                                              exclusion_details={'points': exc.points, 'region': exc.region})
+                            record.setdefault('excluded_targets', []).append({'point': [x, y], 'region': exc.region})
+                            logger = getattr(self.task, 'log_info', None)
+                            if callable(logger):
+                                logger('RWTD_INPUT_EXCLUSION ' + str({'point': [x, y],
+                                    'owner': exc.region.get('owner'), 'node': getattr(runtime, 'current_node', None),
+                                    'feature': exc.region.get('feature'), 'bbox': exc.region.get('bbox')}))
+                            continue
                 repetition["target"] = [x, y] if name != "WaitTest" else None
                 current_backend, current_device = self.task.manual_backend()
                 if current_backend is not backend or current_device != device:
@@ -875,6 +890,10 @@ class ManualDeviceTests:
                     repetition["after"] = str(output / "after.png")
                     record["after"] = str(output / "after.png")
                 record["after_repetition_index"] = repetition_index + 1
+            if record.get('excluded_targets') and not record['input_attempted']:
+                from src.rwtd.android_core.workflow_model import ExclusionIntersection
+                last = record['excluded_targets'][-1]
+                raise ExclusionIntersection([last['point']], last['region'])
             record["input_elapsed_seconds"] = round(time.monotonic() - started, 3)
             record["action_completed"] = True
             expected = parameters.get("verify_feature")
@@ -1165,7 +1184,8 @@ class ManualDeviceTests:
             # skip result; safe inputs before/after remain eligible for batches.
             if step.get('name')!='WaitTest':
                 runtime=getattr(getattr(self.task,'controller',None),'canvas_runtime',None)
-                regions=getattr(runtime,'exclusion_regions',{})
+                from src.rwtd.android_core.canvas_exclusion import active_regions
+                regions=active_regions(runtime)
                 if regions:
                     from src.rwtd.android_core.workflow_model import require_outside_exclusions,ExclusionIntersection
                     points=[[step['x'],step['y']]]
@@ -1198,7 +1218,8 @@ class ManualDeviceTests:
                 raise ValueError('Device changed within module run')
             self.module_run['device']=device
         runtime=getattr(self.task.controller,'canvas_runtime',None)
-        regions=getattr(runtime,'exclusion_regions',{})
+        from src.rwtd.android_core.canvas_exclusion import active_regions
+        regions=active_regions(runtime)
         for step in prepared:
             if step['name']=='WaitTest':
                 continue
