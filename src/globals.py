@@ -11,3 +11,9 @@ class Globals:
         from ok.core.events import communicate
         from src.rwtd.editor_lifecycle import install
         install(og.app, og.executor, communicate.starting_emulator.emit, logger)
+        from src.rwtd.device_connection import install as install_connection
+        install_connection(og.device_manager, communicate.adb_devices.emit, logger)
+
+    def on_show_main_window(self, window):
+        from src.rwtd.native_controls import install as install_controls
+        install_controls(window, og.app, og.executor, logger)

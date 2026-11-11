@@ -13,6 +13,7 @@ def install(app, executor, notify, logger):
     if getattr(controller, '_rwtd_editor_lifecycle', False):
         return
     original_start = controller._do_start
+    original_request = getattr(controller, 'start', None)
     original_frame = executor.next_frame
 
     @wraps(original_start)
@@ -50,5 +51,16 @@ def install(app, executor, notify, logger):
         return original_frame(*args, **kwargs)
 
     controller._do_start = start
+    if original_request is not None:
+        @wraps(original_request)
+        def request(task=None, exit_after=False):
+            selected = executor.onetime_tasks[task] if type(task) is int else task
+            if is_offline_editor(selected):
+                # This path only queues a task and updates native state. Do not
+                # wait behind a previous device preflight on the start Handler.
+                logger.info('RWTD_OFFLINE_EDITOR_REQUEST ' + type(selected).__name__)
+                return start(task, exit_after)
+            return original_request(task, exit_after)
+        controller.start = request
     executor.next_frame = frame
     controller._rwtd_editor_lifecycle = True
