@@ -1,8 +1,18 @@
 {
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
+    ]
+  },
   "schema_version": 1,
   "id": "StoreReward",
   "name": "Store Reward 商店領獎 (simulation contract)",
-  "version": 14,
+  "version": 15,
   "steps": [
     {
       "verification_policy": "manual",
@@ -95,13 +105,12 @@
       "delay_seconds": 0,
       "recognize_before": false,
       "allow_unconfirmed_target": true,
-      "x": 837,
-      "y": 2306,
+      "x": 88,
+      "y": 2303,
       "duration_ms": 50,
       "repeat_count": 5
     }
   ],
   "role": "StoreReward",
-  "simulation_seconds": 3,
-  "revision": "338420b03e3adbc5ad934374a0169157233c4f80f8094ed25d04213abc0b4787"
+  "simulation_seconds": 3
 }

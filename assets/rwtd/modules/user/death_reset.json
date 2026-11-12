@@ -1,8 +1,18 @@
 {
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
+    ]
+  },
   "schema_version": 1,
   "id": "death_reset",
   "name": "重生重置",
-  "version": 2,
+  "version": 3,
   "steps": [
     {
       "verification_policy": "manual",
@@ -15,11 +25,10 @@
       "delay_seconds": 0,
       "recognize_before": false,
       "allow_unconfirmed_target": true,
-      "x": 430,
-      "y": 1321,
+      "x": 606,
+      "y": 1319,
       "duration_ms": 50,
       "repeat_count": 1
     }
-  ],
-  "revision": "23f99af6342a18d91ee6bb2502cabe57f9e4875b5c33b362712465e1c7c12446"
+  ]
 }

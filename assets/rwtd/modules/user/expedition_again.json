@@ -15,7 +15,7 @@
   "schema_version": 1,
   "id": "expedition_again",
   "name": "再次遠征",
-  "version": 68,
+  "version": 71,
   "steps": [
     {
       "verification_policy": "manual",
@@ -73,8 +73,11 @@
         ]
       },
       "condition_effect": {
-        "action": "skip_remaining_now",
-        "when": "NO"
+        "action": "skip_range",
+        "when": "NO",
+        "skip_self_on_match": true,
+        "start_step_id": "3",
+        "end_step_id": "7"
       }
     },
     {
@@ -333,7 +336,7 @@
       "x": 435,
       "y": 1895,
       "duration_ms": 50,
-      "repeat_count": 1
+      "repeat_count": 2
     },
     {
       "verification_policy": "manual",
@@ -349,7 +352,7 @@
       "x": 539,
       "y": 2118,
       "duration_ms": 50,
-      "repeat_count": 4
+      "repeat_count": 5
     },
     {
       "verification_policy": "manual",

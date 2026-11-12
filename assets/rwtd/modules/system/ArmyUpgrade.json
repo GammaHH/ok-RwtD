@@ -1,8 +1,18 @@
 {
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
+    ]
+  },
   "schema_version": 1,
   "id": "ArmyUpgrade",
   "name": "Army Upgrade 士兵強化 (simulation contract)",
-  "version": 48,
+  "version": 52,
   "steps": [
     {
       "verification_policy": "manual",
@@ -33,7 +43,7 @@
       "allow_unconfirmed_target": true,
       "x": 110,
       "y": 2043,
-      "duration_ms": 800,
+      "duration_ms": 1200,
       "end_x": 707,
       "end_y": 1510,
       "mid_x": 103,
@@ -116,7 +126,7 @@
       "allow_unconfirmed_target": true,
       "x": 301,
       "y": 2155,
-      "duration_ms": 1000,
+      "duration_ms": 1200,
       "end_x": 915,
       "end_y": 1312,
       "mid_x": 301,
@@ -181,12 +191,12 @@
       "delay_seconds": 0,
       "recognize_before": false,
       "allow_unconfirmed_target": true,
-      "x": 412,
-      "y": 2158,
-      "duration_ms": 1000,
+      "x": 178,
+      "y": 2154,
+      "duration_ms": 1200,
       "end_x": 960,
       "end_y": 1337,
-      "mid_x": 409,
+      "mid_x": 178,
       "mid_y": 1337
     },
     {
@@ -266,7 +276,7 @@
       "allow_unconfirmed_target": true,
       "x": 319,
       "y": 2097,
-      "duration_ms": 1000,
+      "duration_ms": 1200,
       "end_x": 953,
       "end_y": 1130,
       "mid_x": 323,
@@ -405,6 +415,5 @@
     }
   ],
   "role": "ArmyUpgrade",
-  "simulation_seconds": 1,
-  "revision": "ed7ac336415cbfcc994b39ba43d9fb1794afdf2e5b5d8d71ed907ae22001dcb1"
+  "simulation_seconds": 1
 }

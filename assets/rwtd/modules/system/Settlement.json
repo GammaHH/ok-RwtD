@@ -1,8 +1,18 @@
 {
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
+    ]
+  },
   "schema_version": 1,
   "id": "Settlement",
   "name": "Settlement 結算 (simulation only, real confirmation blocked)",
-  "version": 40,
+  "version": 41,
   "steps": [
     {
       "verification_policy": "manual",
@@ -180,6 +190,22 @@
       "y": 1407,
       "duration_ms": 50,
       "repeat_count": 1
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "12",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 274,
+      "y": 2098,
+      "duration_ms": 50,
+      "repeat_count": 1
     }
   ],
   "global_roi": [
@@ -189,6 +215,5 @@
     1471
   ],
   "role": "Settlement",
-  "simulation_seconds": 1,
-  "revision": "e61dac60c7cbfa92b2b018395f9e613a1856d3b18823a5a8b41c966b3fe2fb2c"
+  "simulation_seconds": 1
 }

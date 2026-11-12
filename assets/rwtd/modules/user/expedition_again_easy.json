@@ -1,8 +1,21 @@
 {
+  "coordinate_metadata": {
+    "stored_resolution": [
+      1080,
+      2400
+    ],
+    "last_edit_resolution": [
+      1080,
+      2340
+    ],
+    "corrections": [
+      "old_phone_y_plus_50_v1"
+    ]
+  },
   "schema_version": 1,
   "id": "expedition_again_easy",
   "name": "簡易再次遠征",
-  "version": 6,
+  "version": 12,
   "steps": [
     {
       "verification_policy": "manual",
@@ -33,7 +46,20 @@
       "allow_unconfirmed_target": false,
       "duration_ms": 50,
       "repeat_count": 1,
-      "target_policy": "single",
+      "input_conditions": {
+        "evaluation": "left_to_right",
+        "clauses": [
+          {
+            "type": "ocr",
+            "join": "AND",
+            "text": "可遠征",
+            "threshold": 0.8,
+            "match": "contains"
+          }
+        ]
+      },
+      "roi_tag": "OKGO",
+      "target_policy": "first_top_to_bottom",
       "target_conditions": {
         "evaluation": "left_to_right",
         "position_policy": "source",
@@ -46,6 +72,10 @@
             "match": "contains"
           }
         ]
+      },
+      "condition_effect": {
+        "action": "skip_remaining_now",
+        "when": "NO"
       }
     },
     {
@@ -75,8 +105,8 @@
       "delay_seconds": 0,
       "recognize_before": false,
       "allow_unconfirmed_target": true,
-      "x": 476,
-      "y": 1138,
+      "x": 472,
+      "y": 1897,
       "duration_ms": 50,
       "repeat_count": 1
     },
@@ -111,25 +141,39 @@
       "y": 2103,
       "duration_ms": 50,
       "repeat_count": 5
+    },
+    {
+      "verification_policy": "manual",
+      "retry_policy": "never",
+      "timeout_seconds": 5,
+      "name": "LongPressTest",
+      "step_id": "7",
+      "threshold": 0.9,
+      "post_wait_seconds": 0,
+      "delay_seconds": 0,
+      "recognize_before": false,
+      "allow_unconfirmed_target": true,
+      "x": 286,
+      "y": 2117,
+      "duration_ms": 50,
+      "repeat_count": 1
     }
   ],
+  "tags": {
+    "OKGO": {
+      "name": "OKGO",
+      "roi": [
+        0,
+        497,
+        236,
+        1412
+      ]
+    }
+  },
   "global_roi": [
     0,
     448,
     1080,
     1770
-  ],
-  "coordinate_metadata": {
-    "stored_resolution": [
-      1080,
-      2400
-    ],
-    "last_edit_resolution": [
-      1080,
-      2340
-    ],
-    "corrections": [
-      "old_phone_y_plus_50_v1"
-    ]
-  }
+  ]
 }
