@@ -207,6 +207,9 @@ class ExceptionMonitor:
                           error_identifier=identity["error_identifier"], configuration_local_only=local_only)
             record['ocr_records']=copy.deepcopy(self._state(frame_task).get('ocr_records',[]))
             record['ocr_records_task']=frame_task if record['ocr_records'] else None
+            from src.rwtd.android_core.ocr_diagnostics import report_summary, notification_text as ocr_notification_text
+            history = error_details.get('ocr_retry_history') if isinstance(error_details, dict) else None
+            record['ocr_summary'] = report_summary(record['ocr_records'], history)
             # Keep the same redacted diagnostic payload used by fingerprinting
             # so a report can identify the exact Canvas/Chain/Input to edit.
             if identity['details']['details'] is not None:
@@ -244,6 +247,7 @@ class ExceptionMonitor:
                 notice = (f"[ok-RwtD][{safe_text(category)}] {'SIMULATED' if simulated else 'EXCEPTION'}\n"
                           f"Task: {safe_text(task_name)}\n{safe_text(description)}\n"
                           f"{failure_diagnostics(error_details)}\n"
+                          f"{ocr_notification_text(record['ocr_summary'])}\n"
                           f"UTC: {record['timestamp_utc']}\nLast success: {state['last_successful_step']}\n"
                           f"Frame: {'STALE' if stale else 'analyzed'}; captured: {frame_utc}\n"
                           f"Recovery attempts: {recovery_attempts}; Stop: {self.stop_requested}")

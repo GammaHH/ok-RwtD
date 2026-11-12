@@ -97,6 +97,14 @@ class FailureEvidence:
             frame=self.monitor.states.get(self.node_key(node),{}).get('frame')
             return frame.copy() if frame is not None else None
 
+    def read_ocr(self, node, frame):
+        """Copy exact-frame metadata only; never borrow another capture's tokens."""
+        with self.lock:
+            state = self.monitor.states.get(self.node_key(node), {})
+            if state.get('recognition_source_id') != id(frame):
+                return []
+            return copy.deepcopy(state.get('ocr_records', []))
+
     def forget(self, node):
         """A failed fresh capture must not leave an older node frame as evidence."""
         key = self.node_key(node)

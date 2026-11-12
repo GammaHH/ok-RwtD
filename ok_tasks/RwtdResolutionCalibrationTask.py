@@ -1,11 +1,8 @@
 """Independent OK task for display profiles and explicit swipe calibration."""
 import re
 import webbrowser
-from pathlib import Path
 
 from ok_tasks.RwtdControlDashboardTask import RwtdControlDashboardTask
-from src.rwtd.dashboard_bridge import DashboardBridge
-from src.rwtd.resolution_calibration_ui import CalibrationEditor
 
 
 class RwtdResolutionCalibrationTask(RwtdControlDashboardTask):
@@ -27,7 +24,10 @@ class RwtdResolutionCalibrationTask(RwtdControlDashboardTask):
         self.model = None
 
     def open_calibration(self):
-        if self.bridge and self.bridge.thread.is_alive(): webbrowser.open(self.bridge.url)
+        workspace = getattr(self, '_native_workspace', None)
+        bridge = workspace.host.bridge if workspace is not None else self.bridge
+        if bridge and bridge.thread.is_alive():
+            webbrowser.open(bridge.url)
 
     def request_close(self):
         if self.model: self.model.closing.set()
@@ -55,36 +55,20 @@ class RwtdResolutionCalibrationTask(RwtdControlDashboardTask):
             raise RuntimeError('ADB 試滑未確認；請先查看實機畫面')
 
     def run(self):
-        workspace = getattr(self, '_native_workspace', None)
-        if workspace is not None and not workspace.closed:
-            self.model = workspace.calibration
-            try:
-                return workspace.serve(self, 'calibration')
-            finally:
-                self.model = None
-        from src.rwtd.android_core.execution_lease import active
-        root = Path(__file__).resolve().parents[1]
-        if active(root): raise ValueError('請先手動停止並儲存 FARM，再啟動解析度校正')
-        self.root = root
-        self.model = CalibrationEditor(root, self._capture_calibration, self._test_calibration_swipe)
-        bridge = DashboardBridge(self.model, root/'assets/rwtd/calibration_ui',
-                                 self.model.snapshot, self.model.image,
-                                 max_command_bytes=9*1024**2)
-        self.bridge = bridge
+        from src.rwtd.workspace_entry import route_to_workspace
+        if route_to_workspace(self, 'calibration'):
+            return
+        workspace = self._native_workspace
+        self.model = workspace.calibration
         try:
-            try: self.model.command('capture', {})
-            except (ValueError, OSError, RuntimeError) as exc:
-                self.model.state['message'] = str(exc)[:300]
-            bridge.start()
-            self.info_set('Calibration', bridge.origin)
-            if self.config.get('Open Calibration', True): self.open_calibration()
-            while self.enabled and not self.exit_is_set() and not self.model.closing.is_set():
-                self.model.process_next()
-                self.model.closing.wait(.1)
+            if getattr(self, '_workspace_capture_requested', False):
+                self._workspace_capture_requested = False
+                try:
+                    self.model.command('capture', {})
+                except (ValueError, OSError, RuntimeError) as exc:
+                    self.model.state['message'] = str(exc)[:300]
+            return workspace.serve(self, 'calibration')
         finally:
-            self.model.closing.set()
-            bridge.close()
-            self.bridge = None
             self.model = None
 
     def on_destroy(self):

@@ -31,6 +31,26 @@ def install(manager, notify, logger):
         return
     original_refresh = manager.refresh_phones
     original_shell = manager.shell_device
+    original_start = getattr(manager, 'do_start', None)
+
+    if callable(original_start):
+        @wraps(original_start)
+        def start(*args, **kwargs):
+            preferred = manager.get_preferred_device()
+            if (preferred and preferred.get('device') == 'adb'
+                    and not preferred.get('emulator') and not preferred.get('full_path')
+                    and manager.config.get('capture') in {'windows', 'ipc'}):
+                # Switching a real phone cannot retain a PC/emulator capture
+                # backend. Do not schedule a second start via set_capture().
+                old = manager.config.get('capture')
+                manager.config['capture'] = 'adb'
+                save = getattr(manager.config, 'save_file', None)
+                if callable(save):
+                    save()
+                logger.info(f'RWTD_PHONE_CAPTURE_NORMALIZED {old} -> adb')
+            return original_start(*args, **kwargs)
+
+        manager.do_start = start
 
     def publish():
         try:

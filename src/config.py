@@ -9,18 +9,14 @@ version, app_profile = resolve_identity(Path(__file__).resolve().parents[1], os.
 
 
 gui_config = {
-    "type": "web" if app_profile.casefold() == "web" else "qt",
+    "type": "qt",
     "window_size": {
-        "width": 1200,
-        "height": 800,
-        "min_width": 600,
-        "min_height": 450,
+        "width": 1440,
+        "height": 900,
+        "min_width": 1000,
+        "min_height": 700,
     },
 }
-
-if gui_config["type"] == "web":
-    gui_config["launch_mode"] = "pywebview"
-
 
 config = {
     "custom_tasks": True,
@@ -33,10 +29,12 @@ config = {
     "wait_until_check_delay": 0,
     "wait_until_settle_time": 0,
     "ocr": {
-        "lib": "onnxocr",
-        "auto_simplify": False,
-        "params": {
-            "use_openvino": True,
+        "default": {
+            "lib": "onnxocr",
+            "auto_simplify": False,
+            "params": {
+                "use_openvino": True,
+            },
         },
     },
     "windows": {
@@ -83,4 +81,5 @@ config = {
     "onetime_tasks": [
         ["ok", "DiagnosisTask"],
     ],
+    "custom_tabs": [["src.rwtd.native_diagnosis", "RwtdDiagnosisPage"]],
 }

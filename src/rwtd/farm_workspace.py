@@ -5,10 +5,11 @@ from collections import deque
 
 
 class FarmWorkspace:
-    def __init__(self, host, controller, preview, roi, task=None, calibration=None, statistics=None):
+    def __init__(self, host, controller, preview, roi, task=None, calibration=None, statistics=None, theme=None):
         self.host, self.controller, self.preview, self.roi = host, controller, preview, roi
         self.calibration = calibration
         self.statistics = statistics
+        self.theme = theme
         self.task = task or next((item for item in getattr(getattr(host,'executor',None),'onetime_tasks',[])
                                   if type(item).__name__=='RwtdFarmTask'),None)
         self.current = 'dashboard'
@@ -17,6 +18,7 @@ class FarmWorkspace:
         calibration_task=next((item for item in tasks if type(item).__name__=='RwtdResolutionCalibrationTask'),None)
         self.owners={'dashboard':host,'farm':self.task,'roi':roi_task,'calibration':calibration_task}
         self.owners['statistics']=next((item for item in tasks if type(item).__name__=='RwtdRoundStatisticsTask'),None)
+        self.owners['theme']=next((item for item in tasks if type(item).__name__=='RwtdThemeSettingsTask'),None)
         self.pending_handoff=None
         self.dashboard_turn=None
         self.cleanup=None
@@ -83,6 +85,8 @@ class FarmWorkspace:
             return '解析度對照尚未完成目前工作，請稍後再切換。'
         if self.statistics and not self.statistics.jobs.empty():
             return '輪次統計尚未完成，請稍後再切換。'
+        if self.theme and not self.theme.jobs.empty():
+            return '配色設定尚未完成，請稍後再切換。'
         return ''
 
     def dashboard_access(self, command):
@@ -111,6 +115,8 @@ class FarmWorkspace:
                     raise ValueError('解析度對照服務不可用')
                 if payload['target']=='statistics' and self.statistics is None:
                     raise ValueError('輪次統計服務不可用')
+                if payload['target']=='theme' and self.theme is None:
+                    raise ValueError('配色設定服務不可用')
                 if payload['target']=='farm' and self.task is None:
                     raise ValueError('原生 FARM TASK 未註冊')
                 target=self.owners.get(payload['target'])
@@ -283,6 +289,8 @@ class FarmWorkspace:
                     break
                 if view=='statistics' and self.statistics.closing.is_set():
                     break
+                if view=='theme' and self.theme.closing.is_set():
+                    break
                 self.process_next()
                 if self.exit_request is not None:
                     break
@@ -298,6 +306,8 @@ class FarmWorkspace:
                     self.calibration.process_next()
                 elif view=='statistics':
                     self.statistics.process_next()
+                elif view=='theme':
+                    self.theme.process_next()
                 self.controller.wake.wait(.2)
             if self.pending_handoff:
                 _,target=self.pending_handoff

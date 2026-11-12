@@ -1,0 +1,22 @@
+[project]
+name = "ok-RwtD"
+version = "0.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[project.optional-dependencies]
+discord = ["discord.py>=2.4,<3"]
+# Qt 3 release used by the official application template.
+qt = [
+    "ok-script[adb,default,ocr,qt]==3.0.0b3",
+    "pywin32==311",
+    "openvino==2026.4.1",
+    "opencv-python==5.0.0.93",
+]
+
+# Existing Web-profile launchers enter the same native shell.
+web = ["ok-RwtD[qt]"]
+
+docs = [
+    "mkdocs==1.6.1",
+]

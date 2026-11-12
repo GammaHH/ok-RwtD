@@ -21,6 +21,7 @@ class DashboardBridge:
         self.workspace_roi_url = None
         self.workspace_calibration_url = None
         self.workspace_statistics_url = None
+        self.workspace_theme_url = None
         self.workspace_host = None
         self.command_access = None
         self.embedded_frame_origin = None
@@ -70,17 +71,34 @@ class DashboardBridge:
                 path = urlsplit(self.path).path
                 if not self.checked(authenticated=path.startswith("/api/")):
                     return
-                if path in {"/", "/workspace_tabs.js", "/farm_workspace.js", "/roi_overview.js", "/dashboard.js", "/color_preview.js", "/diagnostics.js", "/canvas_model.js", "/canvas_view.js", "/workflow_ui.js", "/step_settings.js", "/target_editor.js", "/decision_editor.js", "/exclusion_editor.js", "/test_context.js", "/roi_editor.js", "/gesture_editor.js", "/dashboard.css"}:
+                if path == '/rwtd-theme.css':
+                    from .theme import browser_stylesheet
+                    self.send(200, browser_stylesheet().encode('utf-8'), 'text/css; charset=utf-8')
+                    return
+                if path == '/theme_sync.js':
+                    from pathlib import Path
+                    script=Path(__file__).resolve().parents[2]/'assets/rwtd/theme_sync.js'
+                    self.send(200,script.read_bytes(),'text/javascript; charset=utf-8')
+                    return
+                if path == '/api/theme':
+                    from .theme import current_palette
+                    self.send(200,json.dumps({'palette':current_palette()}).encode('utf-8'))
+                    return
+                if path in {"/", "/workspace_tabs.js", "/farm_workspace.js", "/roi_overview.js", "/dashboard.js", "/module_versions.js", "/color_preview.js", "/diagnostics.js", "/canvas_model.js", "/canvas_view.js", "/workflow_ui.js", "/step_settings.js", "/target_editor.js", "/decision_editor.js", "/exclusion_editor.js", "/test_context.js", "/roi_editor.js", "/gesture_editor.js", "/dashboard.css"}:
                     name = "index.html" if path == "/" else path[1:]
                     kind = "text/html; charset=utf-8" if path == "/" else "text/css; charset=utf-8" if path == "/dashboard.css" else "text/javascript; charset=utf-8"
                     if not (bridge.assets / name).is_file():
                         self.send(404, b'{"error":"Not found"}')
                         return
-                    self.send(200, (bridge.assets / name).read_bytes(), kind)
+                    data=(bridge.assets / name).read_bytes()
+                    if name == 'index.html':
+                        data=data.replace(b'<body>',b'<body><script src="/theme_sync.js"></script>',1)
+                    self.send(200,data,kind)
                 elif path == '/api/workspace':
                     self.send(200,json.dumps({'roi_url':bridge.workspace_roi_url,
                         'calibration_url':bridge.workspace_calibration_url,
-                        'statistics_url':bridge.workspace_statistics_url}).encode('utf-8'))
+                        'statistics_url':bridge.workspace_statistics_url,
+                        'theme_url':bridge.workspace_theme_url}).encode('utf-8'))
                 elif path == "/api/state":
                     status, data = bridge.state_response()
                     self.send(status, data)

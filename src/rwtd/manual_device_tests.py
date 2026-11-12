@@ -356,13 +356,24 @@ class ManualDeviceTests:
             return {"module_run": dict(self.module_run) if self.module_run else None}
         if command == "dashboard_preferences":
             return {"status": "IDLE", "preferences": self.ui_preferences.save(payload), "device_inputs": 0}
-        if command in {'canvas_select','canvas_save_as','canvas_rename'}:
+        if command == 'canvas_open_folder':
+            import os
+            if payload.get('canvas_id') is not None and payload['canvas_id'] != self.decision_store.active_id():
+                raise ValueError('Canvas 選取已變更，請刷新後再開啟資料夾')
+            directory = self.decision_store.path('decision.json').parent
+            directory.mkdir(parents=True, exist_ok=True)
+            os.startfile(str(directory))
+            return {'status': 'IDLE', 'folder': str(directory), 'device_inputs': 0}
+        if command in {'canvas_select','canvas_save_as','canvas_rename','canvas_delete'}:
             if self.module_run and self.module_run.get('active'):raise ValueError('Stop module execution before switching Canvas files')
             if payload.get('canvas_id') is not None and payload['canvas_id']!=self.decision_store.active_id():
                 raise ValueError('Canvas selection changed; reload before saving')
             if command=='canvas_select':graph=self.decision_store.select(payload['id'])
             elif command=='canvas_save_as':graph=self.decision_store.save_as(payload['graph'],payload['name'])
-            else:graph=self.decision_store.rename(payload['name'])
+            elif command=='canvas_rename':graph=self.decision_store.rename(payload['name'])
+            else:
+                self.decision_store.delete(payload.get('expected_revision'),confirmed=payload.get('confirmed'))
+                graph,_=self.decision_store.load_for_edit()
             from src.rwtd.android_core.time_guard import TimeGuards
             self.time_guards=TimeGuards(self.root,namespace=self.decision_store.active_id())
             self.decision_result={'status':'IDLE','graph':graph,'canvas_active_id':self.decision_store.active_id(),'device_inputs':0}
@@ -396,7 +407,7 @@ class ManualDeviceTests:
                 and not getattr(self, "inside_module", False)
                 and _dispatch_token is not self._canvas_dispatch_token):
             raise ValueError("A complete module is paused; continue it or Stop before a separate step test")
-        if (command in {"module_save", "module_import", "module_delete", "scheduler_save"}
+        if (command in {"module_save", "module_import", "module_delete", "module_rename", "module_restore", "module_trash_restore", "module_trash_purge", "scheduler_save"}
                 and self.module_run and self.module_run.get("active")):
             raise ValueError("Stop the paused module before editing definitions or scheduler bindings")
         if command == "execute_module":
@@ -454,6 +465,29 @@ class ManualDeviceTests:
                 result = {key: value for key, value in result.items() if key not in {"kind", "revision"}}
                 result.update(id=payload.get("new_id"), name=payload.get("new_name"), version=1)
                 result = self.store.save(result)
+            elif command == 'module_trash':
+                from .android_core.module_trash import listing
+                result = listing(self.store,self.decision_store)
+            elif command in {'module_trash_restore', 'module_trash_purge'}:
+                from .android_core.module_trash import apply
+                result = apply(self.store, payload.get('backup_id'), payload.get('backup_hash'),
+                               operation='restore' if command == 'module_trash_restore' else 'purge',
+                               confirmed=payload.get('confirmed'),item_type=payload.get('item_type','module'),graphs=self.decision_store)
+                if result.get('restored_canvas'):
+                    from .android_core.time_guard import TimeGuards
+                    self.time_guards=TimeGuards(self.root,namespace=self.decision_store.active_id())
+                    self.decision_result={'status':'IDLE','graph':self.decision_store.load(),
+                                          'canvas_active_id':self.decision_store.active_id(),'device_inputs':0}
+            elif command == 'module_history':
+                result = self.store.history(payload.get('id'))
+            elif command == 'module_restore':
+                result = self.store.restore(payload.get('id'), payload.get('backup_id'), payload.get('backup_hash'),
+                                            payload.get('expected_revision'), confirmed=payload.get('confirmed'),
+                                            allow_system_update=payload.get('system_update', False))
+            elif command == 'module_rename':
+                result = self.store.rename(payload.get('id'), payload.get('expected_revision'), payload.get('value'),
+                                          field=payload.get('field', 'name'),
+                                          allow_system_update=payload.get('system_update', False))
             elif command == "module_delete":
                 if payload.get("confirmed") is not True:
                     raise ValueError("Explicit Delete User Module confirmation required")
@@ -465,6 +499,8 @@ class ManualDeviceTests:
             else:
                 raise ValueError("Unknown editor command")
             self.editor_result = {"command": command, "definition": result}
+            if command in {'module_history', 'module_trash', 'module_trash_restore', 'module_trash_purge'}:
+                self.editor_result['request_token'] = payload.get('request_token')
             return {"status": "READY", "editor": self.editor_result}
         if command == "configure_workflow":
             raise ValueError("Use the persistent module editor to save a user definition")

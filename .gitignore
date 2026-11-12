@@ -1,27 +1,60 @@
-__pycache__/
+# ========================================
+# OK Development Template
+# ========================================
+
+# Track reusable task templates
+!/ok_tasks/
+!/ok_tasks/*.py
+
+# Keep development tools
+!/dev_tools/
+!/dev_tools/*.bat
+
+# Ignore backups
+_template_backup_*/
+_removed_tasks/
+
+# Ignore temporary files
+*.bak
 *.pyc
-.venv*/
-configs/
-logs/
-screenshots/
+
+# Project-local runtime, editor attachments and generated reports
+/.codex-attachments/
+/.codex-remote-attachments/
+/.venv*/
+/packaging_logs/
+/screenshots/
+/pyappify_dist/
+/assets/rwtd/runtime/
+/assets/rwtd/manual_requests/
+/assets/rwtd/presets/
+/assets/rwtd/modules/**/backups/
+/assets/rwtd/scheduler/backups/
+/assets/rwtd/scheduler/time_guards.json
+/assets/rwtd/scheduler/theme.json
+/docs/rwtd/analysis/
+/docs/rwtd/exceptions/
+/docs/rwtd/notifications/
+/docs/rwtd/backups/
+
+# Ignore local environment
+cache/
+known-good/
+
+# Ignore secrets
 .env
 .env.*
-.codex*/
-assets/rwtd/runtime/
-assets/rwtd/manual_requests/
-assets/rwtd/presets/
-assets/rwtd/**/backups/
-assets/rwtd/scheduler/time_guards.json
-assets/rwtd/dashboard/ui_preferences.json
-assets/rwtd/calibration/
-main_debug.py
-web_main_debug.py
-ok/test/
-docs/
-tests/
-dev_tools/
-.agents/
-.github/
-publication-manifest.json
-pyappify_dist/
-packaging_logs/
+!.env.example
+
+# Local runtime configurations
+/configs/
+/logs/
+/assets/rwtd/runtime/farm_round_timings.sqlite3*
+
+# Local backups
+/_template_backup_*/
+/_removed_tasks/
+
+# Python cache
+__pycache__/
+*.pyc

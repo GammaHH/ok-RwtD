@@ -1,10 +1,7 @@
 """Independent native one-time task; stays running until its HTML UI is closed."""
-from pathlib import Path
 import webbrowser
 
 from ok import BaseTask
-from src.rwtd.dashboard_bridge import DashboardBridge
-from src.rwtd.roi_overview import RoiOverview
 
 
 class RwtdRoiOverviewTask(BaseTask):
@@ -22,7 +19,8 @@ class RwtdRoiOverviewTask(BaseTask):
         self.model = None
 
     def open_overview(self):
-        bridge = self.bridge
+        workspace = getattr(self, '_native_workspace', None)
+        bridge = workspace.host.bridge if workspace is not None else self.bridge
         if bridge and bridge.thread.is_alive():
             webbrowser.open(bridge.url)
 
@@ -31,31 +29,15 @@ class RwtdRoiOverviewTask(BaseTask):
             self.model.closing.set()
 
     def run(self):
-        workspace=getattr(self,'_native_workspace',None)
-        if workspace is not None:
-            self.model=workspace.roi
-            try:
-                return workspace.serve(self,'roi')
-            finally:
-                self.model=None
-        root = Path(__file__).resolve().parents[1]
-        self.model = RoiOverview(root)
-        bridge = DashboardBridge(self.model, root/'assets/rwtd/roi_overview',
-            self.model.snapshot, self.model.image, max_command_bytes=12*1024**2)
-        self.bridge = bridge
+        from src.rwtd.workspace_entry import route_to_workspace
+        if route_to_workspace(self, 'roi'):
+            return
+        workspace = self._native_workspace
+        self.model = workspace.roi
         try:
-            bridge.start()
-            self.info_set('ROI Overview', bridge.origin)
-            if self.config.get('Open ROI Overview', True):
-                self.open_overview()
-            # Native OK one-time execution remains occupied while the server lives.
-            while self.enabled and not self.exit_is_set() and not self.model.closing.is_set():
-                self.model.process_next()
-                self.sleep(.1)
+            return workspace.serve(self, 'roi')
         finally:
-            self.model.closing.set()
-            bridge.close()
-            self.bridge = None
+            self.model = None
 
     def on_destroy(self):
         self.request_close()

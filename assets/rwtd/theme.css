@@ -1,0 +1,83 @@
+html { color-scheme: dark; }
+body {
+    background: var(--rwtd-window);
+    color: var(--rwtd-text);
+    accent-color: var(--rwtd-accent);
+    font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+}
+body :is(section, dialog, .canvasExpanded, .canvasExpanded > summary) {
+    background-color: var(--rwtd-surface);
+    border-color: var(--rwtd-border);
+    color: var(--rwtd-text);
+}
+body :is(header, .workspaceTabs) {
+    background: var(--rwtd-sidebar);
+    border-color: var(--rwtd-border);
+}
+body :is(button, input, select, textarea) {
+    background: var(--rwtd-control);
+    border-color: var(--rwtd-border-strong);
+    border-radius: 7px;
+    color: var(--rwtd-text);
+}
+body button:hover:not(:disabled) {
+    background: var(--rwtd-control-hover);
+    border-color: var(--rwtd-accent);
+}
+body button:disabled { color: var(--rwtd-text-disabled); opacity: .65; }
+body :is(input, select, textarea, button):focus-visible {
+    outline: 2px solid var(--rwtd-highlight);
+    outline-offset: 2px;
+}
+body :is(button[aria-pressed=true], .workspaceTabs [aria-selected=true], .editorTabs button[aria-pressed=true], .gestureTypes button[aria-pressed=true]) {
+    background: var(--rwtd-selected-surface);
+    border-color: var(--rwtd-accent);
+    color: var(--rwtd-highlight);
+}
+body .workspaceTabs button[aria-selected=false] { color: var(--rwtd-text-secondary); }
+body .workspaceTabs [role=tablist] { gap: 8px; }
+body :is(th, td, .editorTabs, .modalFooter, .schedulerPanel) { border-color: var(--rwtd-border); }
+body :is(summary, dt, small, .disabledNote, .frameStatus, .canvasHint, .previewThreshold span) {
+    color: var(--rwtd-text-secondary);
+}
+body :is(#notice, #device, #canvasLock) { color: var(--rwtd-mint); }
+body :is(.workspaceTabs [role=status], #executionStatus, #editorExecutionStatus) { color: var(--rwtd-highlight); }
+body a { color: var(--rwtd-accent-text); }
+body h1 { color: var(--rwtd-cyan); }
+body h2 { color: var(--rwtd-mint); }
+body h3 { color: var(--rwtd-green); }
+body h4 { color: var(--rwtd-highlight); }
+body h5 { color: var(--rwtd-orange); }
+body h6 { color: var(--rwtd-pink); }
+body strong { color: var(--rwtd-highlight); }
+body em { color: var(--rwtd-orange); }
+body :is(.chip, .canvasNodeSearch select) {
+    background: var(--rwtd-surface-alt);
+    border-color: var(--rwtd-border);
+}
+body :is(#decisionCanvas, .rwtdCanvas) {
+    background-color: var(--rwtd-sidebar);
+    background-image: radial-gradient(var(--rwtd-border) 1px, transparent 1px);
+    border-color: var(--rwtd-border);
+}
+body :is(#decisionCanvas, .rwtdCanvas):focus { border-color: var(--rwtd-accent); }
+body :is(#moduleTrashDialog, #moduleVersionsDialog) {
+    width: min(760px, 92vw);
+    max-height: 85dvh;
+    overflow: auto;
+}
+body :is(#moduleTrashDialog, #moduleVersionsDialog) select { width: 100%; }
+body :is(#moduleTrashNotice, #moduleVersionsNotice) { color: var(--rwtd-mint); }
+body :is(#moduleTrashDetails, #moduleVersionPreview) { color: var(--rwtd-text-secondary); }
+body .danger {
+    background-color: var(--rwtd-control);
+    border-color: var(--rwtd-danger);
+    color: var(--rwtd-danger);
+}
+body .danger:hover:not(:disabled) { background-color: #442430; border-color: var(--rwtd-danger); }
+body :is(.frameBox, .comparison) { background-color: var(--rwtd-sidebar); }
+body dialog::backdrop { background: #090A16C9; }
+body ::selection { background: var(--rwtd-accent); color: var(--rwtd-highlight); }
+body ::-webkit-scrollbar { width: 10px; height: 10px; }
+body ::-webkit-scrollbar-track { background: var(--rwtd-sidebar); }
+body ::-webkit-scrollbar-thumb { background: var(--rwtd-border-strong); border-radius: 6px; }

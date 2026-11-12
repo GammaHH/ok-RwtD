@@ -895,6 +895,9 @@ class RwtdControlDashboardTask(BaseTask):
             from src.rwtd.android_core.ocr_records import publish
             result['ocr_record']=classified['ocr_record']
             publish(self,result['ocr_record'],frame)
+            evidence = getattr(self, 'failure_evidence', None)
+            result['ocr_evidence'] = (evidence.read_ocr(node, frame) if evidence is not None
+                                      else [result['ocr_record']])
             if node.get('_progress_for'):
                 self.manual.shared_ocr.accept('ProgressKM',classified,time.monotonic())
             detail={'node':node['id'],'variable':node['output_key'],'output_type':output_type(node),
@@ -987,6 +990,8 @@ class RwtdControlDashboardTask(BaseTask):
             return self._run_dashboard()
 
     def _run_dashboard(self):
+        entry = getattr(self, '_workspace_entry', None)
+        self._workspace_entry = None
         self.root = Path(__file__).resolve().parents[1]
         from src.rwtd.android_core.failure_evidence import FailureEvidence
         self.failure_evidence=FailureEvidence(self.root,notifier=self._failure_notifier())
@@ -1084,6 +1089,7 @@ class RwtdControlDashboardTask(BaseTask):
         roi_model = roi_bridge = None
         calibration_model = calibration_bridge = calibration_task = None
         statistics_model = statistics_bridge = None
+        theme_model = theme_bridge = None
         runtime = DashboardRuntime(controller, self.restore_simulation, self.open_dashboard)
         controller.runtime_handler = runtime.command
         from src.rwtd.android_core.preview_worker import PreviewWorker
@@ -1109,6 +1115,10 @@ class RwtdControlDashboardTask(BaseTask):
                     statistics_model.closing.set()
                 if statistics_bridge:
                     statistics_bridge.close()
+                if theme_model:
+                    theme_model.closing.set()
+                if theme_bridge:
+                    theme_bridge.close()
                 if calibration_task and calibration_task.bridge is calibration_bridge:
                     calibration_task.bridge = None
                 bridge.close()
@@ -1146,6 +1156,7 @@ class RwtdControlDashboardTask(BaseTask):
                     embedded_parent_origin=bridge.origin)
                 calibration_bridge.start()
                 calibration_task.bridge = calibration_bridge
+                calibration_task._workspace_capture_requested = entry == 'calibration'
                 bridge.embedded_frame_origins = [calibration_bridge.origin]
                 bridge.workspace_calibration_url = calibration_bridge.url+'&parent_origin='+bridge.origin
             except Exception as exc:
@@ -1168,7 +1179,19 @@ class RwtdControlDashboardTask(BaseTask):
                     statistics_bridge.close()
                 statistics_model = statistics_bridge = None
                 self.log_warning('RWTD_STATISTICS_WORKSPACE_UNAVAILABLE '+type(exc).__name__)
-            workspace=FarmWorkspace(self,controller,runtime,roi_model,calibration=calibration_model,statistics=statistics_model)
+            try:
+                from src.rwtd.theme_settings import ThemeSettingsEditor
+                theme_model=ThemeSettingsEditor(self.root)
+                theme_bridge=DashboardBridge(theme_model,self.root/'assets/rwtd/theme_ui',
+                    theme_model.snapshot,theme_model.image,embedded_parent_origin=bridge.origin)
+                theme_bridge.start()
+                bridge.embedded_frame_origins.append(theme_bridge.origin)
+                bridge.workspace_theme_url=theme_bridge.url+'&parent_origin='+bridge.origin
+            except Exception as exc:
+                if theme_bridge:theme_bridge.close()
+                theme_model=theme_bridge=None
+                self.log_warning('RWTD_THEME_WORKSPACE_UNAVAILABLE '+type(exc).__name__)
+            workspace=FarmWorkspace(self,controller,runtime,roi_model,calibration=calibration_model,statistics=statistics_model,theme=theme_model)
             workspace.cleanup=cleanup
             bridge.workspace_host=workspace
             bridge.command_access=workspace.dashboard_access
@@ -1187,12 +1210,18 @@ class RwtdControlDashboardTask(BaseTask):
                     if workspace.closed or workspace.pending_handoff or workspace.exit_request is not None or workspace.current!='statistics':
                         raise ValueError('請先停止並儲存目前功能，再切到輪次統計。')
                 statistics_bridge.command_access=statistics_access
+            if theme_bridge:
+                def theme_access(command):
+                    if workspace.closed or workspace.pending_handoff or workspace.exit_request is not None or workspace.current!='theme':
+                        raise ValueError('請先切到配色設定。')
+                theme_bridge.command_access=theme_access
             bridge.start()
             self.info_set("Dashboard", bridge.origin)
-            live_preview = self.configure_startup_preview()
+            live_preview = self.configure_startup_preview() if entry is None else False
             self.log_info("Dashboard 啟動：" + ("Android Preview 待擷取；唯讀、自動刷新關閉。" if live_preview else "預覽已停止。") + "Discord 與 Auto Farming 停用。")
-            if self.config.get("Open Dashboard", True):
-                webbrowser.open(bridge.url)
+            if self.config.get("Open Dashboard", True) or entry is not None:
+                url = bridge.url + ('&workspace_view=' + entry if entry else '')
+                webbrowser.open(url)
             previous = time.monotonic()
             next_log_cleanup = previous + 60
             def dashboard_turn():
@@ -1222,4 +1251,8 @@ class RwtdControlDashboardTask(BaseTask):
                     workspace.shutdown()
             else:
                 cleanup()
+
+    def disable(self):
+        self._workspace_entry = None
+        return super().disable()
 

@@ -465,12 +465,10 @@ class RwtdFarmTask(RwtdControlDashboardTask):
                 self._discord_module_job=None
             return
         try:
-            workspace=getattr(self,'_native_workspace',None)
-            if workspace is not None:
-                return workspace.serve(self,'farm')
-            # Standalone native Farm keeps its original execution path.
-            for _ in self.run_service():
-                pass
+            from src.rwtd.workspace_entry import route_to_workspace
+            if route_to_workspace(self, 'farm'):
+                return
+            return self._native_workspace.serve(self,'farm')
         except Exception as exc:
             if current():current().ended(self,exc)
             raise

@@ -1,9 +1,5 @@
 """Native, device-independent timing report TASK."""
-import webbrowser
-from pathlib import Path
 from ok import BaseTask
-from src.rwtd.dashboard_bridge import DashboardBridge
-from src.rwtd.round_statistics_ui import RoundStatisticsEditor
 
 
 class RwtdRoundStatisticsTask(BaseTask):
@@ -17,28 +13,15 @@ class RwtdRoundStatisticsTask(BaseTask):
         self.bridge=self.model=None
 
     def run(self):
-        workspace=getattr(self,'_native_workspace',None)
-        if workspace is not None and not workspace.closed:
-            self.model=workspace.statistics
-            try:
-                return workspace.serve(self,'statistics')
-            finally:
-                self.model=None
-        root=Path(__file__).resolve().parents[1]
-        self.model=RoundStatisticsEditor(root)
-        self.bridge=DashboardBridge(self.model,root/'assets/rwtd/statistics_ui',self.model.snapshot,self.model.image)
+        from src.rwtd.workspace_entry import route_to_workspace
+        if route_to_workspace(self, 'statistics'):
+            return
+        workspace = self._native_workspace
+        self.model = workspace.statistics
         try:
-            self.bridge.start()
-            self.info_set('Round statistics',self.bridge.origin)
-            if self.config.get('Open Statistics',True):
-                webbrowser.open(self.bridge.url)
-            while self.enabled and not self.exit_is_set() and not self.model.closing.is_set():
-                self.model.process_next()
-                self.model.closing.wait(.1)
+            return workspace.serve(self, 'statistics')
         finally:
-            self.model.closing.set()
-            self.bridge.close()
-            self.bridge=self.model=None
+            self.model = None
 
     def on_destroy(self):
         if self.model:

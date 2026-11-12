@@ -191,6 +191,11 @@ class DecisionGraphStore:
         if any(item['name'].casefold()==name.strip().casefold() for key,item in registry['entries'].items() if key!=current):
             raise ValueError('Canvas name already exists')
 
+    @definition_edit
+    def delete(self, expected_revision, *, confirmed=False):
+        from .canvas_trash import delete
+        return delete(self,expected_revision,confirmed)
+
     def load(self, force_read=False):
         with self._read_lock:
             path = self.path("decision.json")

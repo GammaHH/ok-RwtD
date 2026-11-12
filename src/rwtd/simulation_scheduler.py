@@ -183,7 +183,7 @@ class SimulationController:
         payload = copy.deepcopy(payload or {})
         if not isinstance(request_id, str) or not 1 <= len(request_id) <= 100 or not isinstance(payload, dict):
             raise ValueError("Invalid request identity/payload")
-        if command not in {"decision_start", "decision_control", "trigger_control", "dashboard_preferences", "canvas_select", "canvas_save_as", "canvas_rename", "decision_save", "decision_simulate", "module", "step", "observe", "confirm_rebirth", "auto_simulation", "calibration", "stop", "mode", "preview_settings", "dashboard_open", "dashboard_close", "pause_module", "device_test", "execute_module", "refresh_frame", "view_report", "save_preset", "manual_verify", "configure_workflow", "module_save", "module_import", "module_export", "module_duplicate", "module_delete", "scheduler_save", "storage_scan", "storage_preview", "storage_clean", "storage_settings", "storage_open"}:
+        if command not in {"decision_start", "decision_control", "trigger_control", "dashboard_preferences", "canvas_open_folder", "canvas_select", "canvas_save_as", "canvas_rename", "canvas_delete", "decision_save", "decision_simulate", "module", "step", "observe", "confirm_rebirth", "auto_simulation", "calibration", "stop", "mode", "preview_settings", "dashboard_open", "dashboard_close", "pause_module", "device_test", "execute_module", "refresh_frame", "view_report", "save_preset", "manual_verify", "configure_workflow", "module_save", "module_import", "module_export", "module_duplicate", "module_delete", "module_rename", "module_history", "module_restore", "module_trash", "module_trash_restore", "module_trash_purge", "scheduler_save", "storage_scan", "storage_preview", "storage_clean", "storage_settings", "storage_open"}:
             raise ValueError("Unknown simulation command")
         if command in {"stop", "dashboard_close"}:
             # A control latch only: HTTP workers never execute Android operations.
@@ -550,10 +550,10 @@ class SimulationController:
                     if not self.runtime_handler:
                         raise ValueError("Dashboard runtime unavailable")
                     record["status"] = self.runtime_handler(command, payload)["status"]
-                elif command in {"dashboard_preferences", "canvas_select", "canvas_save_as", "canvas_rename", "decision_save", "decision_simulate", "save_preset", "manual_verify", "view_report", "configure_workflow", "module_save", "module_import", "module_export", "module_duplicate", "module_delete", "scheduler_save", "storage_scan", "storage_preview", "storage_clean", "storage_settings", "storage_open"}:
+                elif command in {"dashboard_preferences", "canvas_open_folder", "canvas_select", "canvas_save_as", "canvas_rename", "canvas_delete", "decision_save", "decision_simulate", "save_preset", "manual_verify", "view_report", "configure_workflow", "module_save", "module_import", "module_export", "module_duplicate", "module_delete", "module_rename", "module_history", "module_restore", "module_trash", "module_trash_restore", "module_trash_purge", "scheduler_save", "storage_scan", "storage_preview", "storage_clean", "storage_settings", "storage_open"}:
                     if not self.manual_handler:
                         raise ValueError("Manual preset service unavailable")
-                    if self.active and (command.startswith("module_") or command == "scheduler_save"):
+                    if self.active and ((command.startswith("module_") and command not in {"module_history", "module_trash"}) or command == "scheduler_save"):
                         raise ValueError("Edit definitions only while simulation is idle")
                     result = self.manual_handler(command, payload, self.device_stop)
                     if command in {'canvas_select','canvas_save_as','canvas_rename'}:
@@ -905,9 +905,11 @@ class SimulationController:
         # Both enqueue and task-thread execution validate current backend state.
         # Read-only refresh and ordinary manual verification never start/lock Canvas.
         scheduled = self.schedule_test is not None and self.schedule_test.status == 'RUNNING'
-        if (self.canvas_runtime.locked or scheduled) and command in {"canvas_select", "canvas_save_as", "canvas_rename", "decision_save", "decision_simulate", "decision_start", "device_test", "execute_module", "module", "step", "auto_simulation", "mode", "confirm_rebirth"}:
+        if command in {'module_restore', 'module_trash_restore', 'module_trash_purge'} and (self.canvas_runtime.locked or scheduled or self.trigger_scheduler.active or self.trigger_work):
+            raise ValueError('請先停止 Canvas／Trigger，再變更模組版本或垃圾桶')
+        if (self.canvas_runtime.locked or scheduled) and command in {"canvas_select", "canvas_save_as", "canvas_rename", "canvas_delete", "module_rename", "decision_save", "decision_simulate", "decision_start", "device_test", "execute_module", "module", "step", "auto_simulation", "mode", "confirm_rebirth"}:
             raise ValueError("Scheduler active: Stop before editing flow or running another module test")
-        if self.trigger_scheduler.active and command in {'canvas_select','canvas_save_as','canvas_rename','decision_save','decision_simulate','decision_start'}:
+        if self.trigger_scheduler.active and command in {'canvas_select','canvas_save_as','canvas_rename','canvas_delete','module_rename','decision_save','decision_simulate','decision_start'}:
             raise ValueError('Stop TriggerTasks before editing or replacing the Canvas')
         if self.trigger_work and command in {'device_test','execute_module','mode'}:
             raise ValueError('TriggerTask operation is executing; wait for the input queue')

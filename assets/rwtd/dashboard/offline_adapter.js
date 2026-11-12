@@ -8,8 +8,8 @@ window.createOfflineAdapter=function(seed,png){
  let triggerQueue=[],triggerLatched=new Set(),runningTrigger=null;
  const log=(event,message,request_id)=>{state.logs.push({timestamp_utc:new Date().toISOString(),event,message,request_id});state.logs=state.logs.slice(-200);};
  const runtime=()=>state.scheduler_runtime;
- function persist(){try{localStorage.setItem(key,JSON.stringify({graph:state.decision_graph,modules:state.module_catalog,backups:state.module_backups||[],preferences:state.ui_preferences}));}catch{log('ERROR','瀏覽器限制本機儲存；請匯出模組／診斷備份。');}}
- try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved){state.decision_graph=saved.graph;state.module_catalog=saved.modules;state.module_backups=saved.backups||[];state.ui_preferences=saved.preferences;}}catch{}
+ function persist(){try{localStorage.setItem(key,JSON.stringify({graph:state.decision_graph,modules:state.module_catalog,backups:state.module_backups||[],deleted:state.module_deleted||[],preferences:state.ui_preferences}));}catch{log('ERROR','瀏覽器限制本機儲存；請匯出模組／診斷備份。');}}
+ try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved){state.decision_graph=saved.graph;state.module_catalog=saved.modules;state.module_backups=saved.backups||[];state.module_deleted=saved.deleted||[];state.ui_preferences=saved.preferences;}}catch{}
  function next(port,allowFixed=true){const n=graph.nodes.find(n=>n.id===cursor);if(runtime().entry_guard_ready)delete runtime().entry_guard_ready[cursor];if(runtime().entry_guard_attempts)delete runtime().entry_guard_attempts[cursor];if(allowFixed&&!['action','start'].includes(n.kind)&&repeatNode(n))return;if(runtime().unmet_attempts)delete runtime().unmet_attempts[cursor];if(runtime().ocr_attempts)delete runtime().ocr_attempts[cursor];const edge=graph.edges.find(e=>e.source===cursor&&e.port===port);if(!edge)throw Error('缺少出口連線');for(const[key,r]of Object.entries(runtime().exclusion_regions||{}))if(r.target_node===cursor)delete runtime().exclusion_regions[key];runtime().active_edge=edge.id;runtime().completed.push(cursor);runtime().entry_pending=true;if(runtime().entry_visits?.[edge.target]){if(graph.settings.max_cycles!==null&&runtime().entry_visits[edge.target]>=graph.settings.max_cycles){stop('循環次數上限已達','SUCCESS');return;}pendingNext=edge.target;due=simNow+graph.settings.round_wait_seconds;}else cursor=edge.target;if(graph.settings.node_handoff_seconds!==undefined)due=Math.max(due,simNow+graph.settings.node_handoff_seconds);runtime().next_node=cursor;}
  function repeatChain(){const entry=graph.nodes.find(n=>n.id===graph.entry);runtime().chain_completed_runs=(runtime().chain_completed_runs||0)+1;if(entry.kind!=='start'||runtime().chain_completed_runs>=(entry.repeat_runs??1))return false;cursor=entry.id;pendingNext=null;chainStarted=simNow;Object.assign(runtime(),{entry_visits:{},entry_pending:true,fixed_counts:{},unmet_attempts:{},ocr_attempts:{},entry_guard_ready:{},entry_guard_attempts:{},variables:{},action_plan:null,action_result:null,next_node:cursor});due=simNow+graph.settings.round_wait_seconds;runtime().reason='整條流程固定重複';return true;}
  function stop(reason,outcome=null){if(state.chain_test)state.chain_test.status=outcome==='SUCCESS'?'COMPLETED':outcome==='FAILED'?'FAILED':'STOPPED';actionBatch=null;Object.assign(runtime(),{status:'STOPPED',locked:false,reason,outcome,trigger_queue:[],running_trigger:null});pendingNext=null;triggerQueue=[];runningTrigger=null;}
@@ -118,7 +118,55 @@ window.createOfflineAdapter=function(seed,png){
   else if(name==='preview_settings'){if(typeof payload.enabled!=='boolean'||!Number.isFinite(payload.interval_seconds)||payload.interval_seconds<.5||payload.interval_seconds>30)throw Error('無效刷新間隔');state.auto_refresh=payload.enabled;state.full_recognition=payload.full_recognition===true;state.refresh_interval_seconds=payload.interval_seconds;refreshDue=now+payload.interval_seconds;}
   else if(name==='module_save'||name==='module_import')saveModule(payload.definition,payload.expected_revision,name==='module_import'||(name==='module_save'&&payload.system_update===true));
   else if(name==='module_duplicate'){const original=state.module_catalog.find(m=>m.id===payload.id);if(!original)throw Error('模組不存在');const data=clone(original);delete data.kind;delete data.revision;Object.assign(data,{id:payload.new_id,name:payload.new_name,version:1});saveModule(data);}
-  else if(name==='module_delete'){const m=state.module_catalog.find(m=>m.id===payload.id);if(m?.kind!=='user'||payload.expected_revision!==m.revision||!payload.confirmed)throw Error('無效刪除確認');if(state.decision_graph?.nodes.some(n=>n.module===m.id)||locked()&&graph.nodes.some(n=>n.module===m.id))throw Error('排程仍引用此模組');state.module_catalog=state.module_catalog.filter(m=>m.id!==payload.id);persist();}
+   else if(name==='module_trash'){
+    const all=state.module_deleted||[];
+    const items=[...all].reverse().slice(0,100).map(b=>({backup_id:b.key,backup_hash:JSON.stringify(b),id:b.data.id,name:b.data.name,version:b.data.version,step_count:b.data.steps.length,deleted_at:b.deleted_at,conflict:state.module_catalog.some(m=>m.id.toLowerCase()===b.data.id.toLowerCase())}));
+    state.editor_result={command:name,request_token:payload.request_token,definition:{items,skipped:0,truncated:all.length>100}};
+   }
+   else if(['module_trash_restore','module_trash_purge'].includes(name)){
+    if(locked()||observers.active()||state.module_run?.active)throw Error('先停止 Canvas／模組，再變更垃圾桶');
+    const item=(state.module_deleted||[]).find(b=>b.key===payload.backup_id);
+    if(!item||JSON.stringify(item)!==payload.backup_hash||payload.confirmed!==true)throw Error('備份已變更或未確認，請重新載入');
+    let definition;
+    if(name==='module_trash_restore'){
+     if(state.module_catalog.some(m=>m.id.toLowerCase()===item.data.id.toLowerCase()))throw Error('同 ID 模組已存在，不覆寫');
+     const data=clone(item.data);delete data.kind;delete data.revision;data.version++;saveModule(data);
+     definition={restored:clone(state.editor_result.definition),backup_retained:true};
+    }else{state.module_deleted=state.module_deleted.filter(b=>b.key!==item.key);definition={purged:true,name:item.data.name};persist();}
+    state.editor_result={command:name,request_token:payload.request_token,definition};
+   }
+   else if(name==='module_history'){
+   const m=state.module_catalog.find(m=>m.id===payload.id);if(!m)throw Error('模組不存在');
+   const items=(state.module_backups||[]).map((b,i)=>({b,i})).filter(({b})=>b.id===m.id&&b.kind===m.kind).reverse().slice(0,100).map(({b,i})=>{
+    const changes=[];for(const key of new Set([...Object.keys(m),...Object.keys(b)])){if(!['version','revision','kind'].includes(key)&&JSON.stringify(m[key])!==JSON.stringify(b[key]))changes.push(key==='steps'?'步驟內容／順序已變更':key+' 已變更');}
+    return {backup_id:'offline-'+i,backup_hash:JSON.stringify(b),version:b.version,saved_at:null,step_count:b.steps.length,name:b.name,changes};
+   });
+   state.editor_result={command:name,request_token:payload.request_token,definition:{module_id:m.id,current_revision:m.revision,current_version:m.version,items,skipped:0,truncated:false}};
+  }
+  else if(name==='module_restore'){
+   if(locked()||observers.active()||state.module_run?.active)throw Error('先停止 Canvas／模組，再回復版本');
+   const m=state.module_catalog.find(m=>m.id===payload.id),match=/^offline-(\d+)$/.exec(payload.backup_id||''),b=match&&(state.module_backups||[])[Number(match[1])];
+   if(!m||m.revision!==payload.expected_revision||!b||b.id!==m.id||b.kind!==m.kind||JSON.stringify(b)!==payload.backup_hash||payload.confirmed!==true)throw Error('版本已變更或尚未確認，請重新載入');
+   const data=clone(b);delete data.kind;delete data.revision;saveModule(data,m.revision,payload.system_update===true);
+  }
+  else if(name==='canvas_open_folder'){throw Error('離線預覽不能開啟本機 Canvas 資料夾；請由實際 Dashboard 開啟');}
+  else if(name==='module_rename'){
+   if(locked()||state.module_run?.active)throw Error('請先停止執行，再重新命名模組');
+   const original=state.module_catalog.find(m=>m.id===payload.id),field=payload.field||'name',value=typeof payload.value==='string'?payload.value.trim():'';
+   if(!original||original.revision!==payload.expected_revision)throw Error('模組已變更，請重新載入');
+   if(!['name','id'].includes(field)||!value||value.length>(field==='id'?80:120))throw Error('請填入有效的新名稱／ID');
+   const data=clone(original);delete data.kind;delete data.revision;
+   if(field==='name'){data.name=value;saveModule(data,original.revision,payload.system_update===true);}
+   else{
+    if(original.kind!=='user')throw Error('系統模組 ID 固定；可改外顯名稱');
+    if(!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(value)||/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(value))throw Error('Module ID 無效');
+    if(value===original.id)return;
+    if(state.module_catalog.some(m=>m.id.toLowerCase()===value.toLowerCase()))throw Error('Module ID 已存在或僅大小寫不同');
+    if(state.decision_graph?.nodes.some(n=>n.module===original.id)||graph?.nodes.some(n=>n.module===original.id)||Object.values(state.scheduler_roles||{}).includes(original.id)||state.module_display_mapping?.[original.id])throw Error('此 ID 仍被 Canvas／排程／解析度映射引用；請先解除綁定或只改外顯名稱');
+    data.id=value;data.version=original.version+1;saveModule(data);state.module_backups??=[];state.module_backups.push(clone(original));state.module_catalog=state.module_catalog.filter(m=>m.id!==original.id);persist();
+   }
+  }
+  else if(name==='module_delete'){const m=state.module_catalog.find(m=>m.id===payload.id);if(m?.kind!=='user'||payload.expected_revision!==m.revision||!payload.confirmed)throw Error('無效刪除確認');if(state.decision_graph?.nodes.some(n=>n.module===m.id)||locked()&&graph.nodes.some(n=>n.module===m.id))throw Error('排程仍引用此模組');state.module_deleted??=[];state.module_deleted.push({key:'deleted_'+crypto.randomUUID(),deleted_at:new Date().toISOString(),data:clone(m)});state.module_catalog=state.module_catalog.filter(m=>m.id!==payload.id);persist();}
   else if(name==='device_test'){if(state.module_run?.active)throw Error('先停止完整模組測試');const m=state.module_catalog.find(m=>m.id===payload.workflow_module);report(payload,m);}
   else if(name==='execute_module'){
    const m=state.module_catalog.find(m=>m.id===payload.id);if(!m)throw Error('模組不存在');if(!payload.explicit_execution||!payload.reversible_ack)throw Error('需明確開始');

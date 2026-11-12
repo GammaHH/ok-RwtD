@@ -3,9 +3,11 @@ from functools import wraps
 
 
 def is_offline_editor(task):
-    # Farm inherits the Dashboard implementation but still requires a device.
-    return (task is not None and type(task).__name__ in {'RwtdControlDashboardTask', 'RwtdResolutionCalibrationTask', 'RwtdRoundStatisticsTask'}
-            and getattr(task, '_rwtd_offline_editor', False) is True)
+    # Each feature first opens an offline workspace; device actions validate
+    # their own ADB connection when the user starts them inside that workspace.
+    return (task is not None and type(task).__name__ in {
+        'RwtdControlDashboardTask', 'RwtdFarmTask', 'RwtdRoiOverviewTask',
+        'RwtdResolutionCalibrationTask', 'RwtdRoundStatisticsTask', 'RwtdThemeSettingsTask'})
 
 
 def install(app, executor, notify, logger):

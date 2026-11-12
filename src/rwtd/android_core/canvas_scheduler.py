@@ -251,7 +251,7 @@ def validate_canvas(value, module_ids):
         if not isinstance(position, dict) or set(position) != {"x", "y"} or not all(number(v, -100000, 100000) for v in position.values()):
             raise ValueError("Invalid Canvas position")
     view = ui.get("viewport", {"x": 0, "y": 0, "zoom": 1})
-    if not isinstance(view, dict) or set(view) != {"x", "y", "zoom"} or not number(view["zoom"], .2, 3) or not all(number(view[k], -100000, 100000) for k in ("x", "y")):
+    if not isinstance(view, dict) or set(view) != {"x", "y", "zoom"} or not number(view["zoom"], .001, 3) or not all(number(view[k], -100000, 100000) for k in ("x", "y")):
         raise ValueError("Invalid Canvas viewport")
     from src.rwtd.android_core.canvas_chains import validate_chains
     validate_chains(value)
@@ -302,6 +302,7 @@ class CanvasRuntime:
         self.exclusion_regions = {}
         self.variables, self.notifications = {}, []
         self.ocr_attempts = {}
+        self.ocr_trials = {}
         self.unmet_attempts = {}
         self.exit_unmet_attempts = {}
         self.condition_probe = None
@@ -443,6 +444,7 @@ class CanvasRuntime:
         self.exit_unmet_attempts.pop(self.cursor,None)
         self.condition_probe = None
         self.ocr_attempts.pop(self.cursor,None)
+        self.ocr_trials.pop(self.cursor,None)
         edge = next(e for e in self.graph["edges"] if e["source"] == self.cursor and e["port"] == port)
         from .canvas_exclusion import leave
         leave(self, self.cursor)
@@ -478,6 +480,7 @@ class CanvasRuntime:
             return False
         self.entry_guard_ready.discard(node['id'])
         self.ocr_attempts.pop(node['id'],None)
+        self.ocr_trials.pop(node['id'],None)
         self.unmet_attempts.pop(node['id'],None)
         if node['kind']=='exclusion':
             self.exclusion_regions.pop(node['id'],None)
@@ -512,6 +515,8 @@ class CanvasRuntime:
                'source':self.source,'notify_discord':self.notify_discord}
         event['recognition']={k:copy.deepcopy(node[k]) for k in
             ('feature','threshold','roi','op','value') if k in node}
+        if self.ocr_trials.get(node['id']):
+            event['ocr_retry_history'] = copy.deepcopy(self.ocr_trials[node['id']])
         if self.trace and self.trace[-1].get('progress_ocr') is not None:
             event['recognition']['progress_ocr']=copy.deepcopy(self.trace[-1]['progress_ocr'])
         if kind=='node_limit':
@@ -767,6 +772,7 @@ class CanvasRuntime:
                     self.unmet_attempts.clear()
                     self.exit_unmet_attempts.clear()
                     self.ocr_attempts.clear()
+                    self.ocr_trials.clear()
                     self.entry_guard_ready.clear()
                     self.entry_guard_attempts.clear()
                     self.variables.clear()
@@ -1015,6 +1021,16 @@ class CanvasRuntime:
             attempt = self.ocr_attempts.get(node['id'],0)+1
             self.ocr_attempts[node['id']] = attempt
             sample, route = decide(node,result,attempt)
+            from .ocr_diagnostics import summarize
+            records = result.get('ocr_evidence') if isinstance(result, dict) else None
+            if not isinstance(records, list):
+                records = [sample['ocr_record']] if isinstance(sample.get('ocr_record'), dict) else []
+            trial = summarize(records, node)
+            trial.update(attempt=attempt, result=sample.get('state'), value=sample.get('value'),
+                         frame_id=sample.get('frame_id'), reason=sample.get('reason'))
+            trials = self.ocr_trials.setdefault(node['id'], [])
+            trials.append(trial)
+            del trials[:-100]
             self.variables[node['output_key']] = sample
             self.trace[-1]['ocr'] = copy.deepcopy(sample)
             self.trace[-1]['ocr_attempt'] = attempt

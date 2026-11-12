@@ -81,6 +81,14 @@ def validate_conversion(rule):
             raise ValueError('OCR conversion scale/offset must be finite')
 
 
+def numeric_text(node, text):
+    """Only explicitly configured aliases are normalized; no global S/5 guess."""
+    text = unicodedata.normalize('NFKC', text)
+    for old, new in node.get('ocr_conversion', {}).get('replacements', {}).items():
+        text = text.replace(old, new)
+    return text
+
+
 def read_value(node, texts):
     text=' '.join(texts)
     rule=node.get('ocr_conversion',{})
@@ -95,9 +103,7 @@ def read_value(node, texts):
         return parse_time(text,rule.get('time_format','auto'))
     if output=='number':
         rule=node.get('ocr_conversion',{})
-        text=unicodedata.normalize('NFKC',text)
-        for old,new in rule.get('replacements',{}).items():
-            text=text.replace(old,new)
+        text=numeric_text(node,text)
         units=rule.get('units',{})
         pattern=r'[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?'
         matches=list(re.finditer(pattern,text))

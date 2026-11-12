@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RwtD 配色設定</title><link rel="stylesheet" href="/dashboard.css"><link rel="stylesheet" href="/rwtd-theme.css"></head>
+<body>
+<header><h1>配色設定</h1><div class="toolbar"><button id="save">儲存並套用</button><button id="reload">重新載入</button><button id="defaults">恢復預設（草稿）</button><button id="close">返回 Dashboard</button></div></header>
+<p>預設使用 Obsidian Prism 深靛藍／紫色配色。編輯時只預覽本頁；儲存後套用到 Qt 與目前工作區。未開啟的獨立網頁在重新取得焦點時同步。</p>
+<p id="status" role="status">讀取配色設定…</p>
+<main class="themeLayout"><section aria-label="色彩選擇"><h2>顏色</h2><p>可使用選色器或輸入色碼。框選填色支援最後兩碼透明度；其餘使用六碼色碼。</p><div id="colors"></div></section>
+<section class="preview" aria-label="即時預覽"><h2>即時預覽</h2><nav><button class="selected">Dashboard</button><button>FARM</button><button>配色設定</button></nav>
+<article><h3>模組與步驟</h3><p>主要文字、<span class="secondary">次要說明</span>與 <a role="link" tabindex="0">連結文字</a>。</p><button>一般按鈕</button> <button disabled>停用按鈕</button> <button class="danger">刪除</button></article>
+<svg id="preview" viewBox="0 0 500 230" role="img" aria-label="Canvas 節點、Guard 與執行路徑預覽"><path d="M140 130 C140 200 370 200 370 130" class="link"/><path d="M140 130 C140 165 370 165 370 130" class="activeLink"/><rect x="30" y="50" width="200" height="80" rx="9" class="node"/><rect x="270" y="50" width="200" height="80" rx="9" class="activeNode"/><rect x="40" y="10" width="150" height="32" rx="7" class="guard"/><text x="52" y="32">附加 Guard</text><text x="45" y="78">執行模組</text><text x="45" y="105" class="secondary">自動遠征</text><text x="285" y="78">目前節點</text><text x="285" y="105" class="secondary">下一步</text></svg>
+<div class="states"><span class="success">完成</span><span class="warning">警示</span><span class="dangerText">失敗</span></div><h4>強調文字與焦點</h4><h5>提醒</h5><h6>輔助標題</h6>
+</section></main><script src="/dashboard.js"></script></body></html>

@@ -15,5 +15,11 @@ class Globals:
         install_connection(og.device_manager, communicate.adb_devices.emit, logger)
 
     def on_show_main_window(self, window):
+        from src.rwtd.native_window import install as install_native_window
+        install_native_window(logger)
         from src.rwtd.native_controls import install as install_controls
         install_controls(window, og.app, og.executor, logger)
+        from src.rwtd.theme import install_native_theme
+        install_native_theme()
+        from src.rwtd.native_pointer_diagnostics import install as install_pointer_diagnostics
+        install_pointer_diagnostics(window, logger)

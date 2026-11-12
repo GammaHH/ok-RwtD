@@ -19,7 +19,7 @@ def eligible(node):
 def recognize(task, frame, roi, node, threshold, context, box_factory):
     """Return one accepted Box or []; invalid/unsupported reads stay empty."""
     from .ocr_records import describe,publish
-    from .canvas_ocr import read_value,output_type
+    from .canvas_ocr import read_value,output_type,numeric_text
     is_time=isinstance(node,dict) and output_type(node)=='time'
     tokens=[];value=None;reason='unsupported_engine';accepted=False
     try:
@@ -58,7 +58,7 @@ def recognize(task, frame, roi, node, threshold, context, box_factory):
                 value=parse_time(normalized,'hms') if normalize_hms(normalized) else None
             else:
                 value=read_value(node,[text])
-        elif not re.fullmatch(r'[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?',normalized):
+        elif not re.fullmatch(r'[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?',numeric_text(node,normalized)):
             reason='not_a_complete_number';return []
         else:
             value=read_value(node,[text])

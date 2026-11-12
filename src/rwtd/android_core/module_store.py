@@ -192,6 +192,16 @@ class ModuleStore:
             raise ValueError("Module missing, invalid, or duplicate id")
         return matches[0]
 
+    def history(self, module_id):
+        from .module_versions import history
+        return history(self, module_id)
+
+    @definition_edit
+    def restore(self, module_id, backup_id, backup_hash, expected_revision, *, confirmed=False, allow_system_update=False):
+        from .module_versions import restore
+        return restore(self, module_id, backup_id, backup_hash, expected_revision,
+                       confirmed=confirmed, allow_system_update=allow_system_update)
+
     @definition_edit
     def save(self, value, expected_revision=None, allow_system_update=False):
         data = validate_module(value, self.profile.step_validator)
@@ -221,6 +231,70 @@ class ModuleStore:
         from .record_retention import enforce
         enforce(self.profile.definitions_root,'backups',f"{self.profile.modules_root}/{kind}/backups")
         return data
+
+    @definition_edit
+    def rename(self, module_id, expected_revision, value, *, field='name', allow_system_update=False):
+        """Names preserve identity; ID changes require an unreferenced user module."""
+        if field not in {'name', 'id'} or not isinstance(value, str) or not value.strip():
+            raise ValueError('請選擇外顯名稱／ID，並填入新名稱')
+        value = value.strip()
+        previous = self.get(module_id)
+        if previous['revision'] != expected_revision:
+            raise ValueError('模組已變更，請重新載入後再命名')
+        data = {key: item for key, item in previous.items() if key != 'kind'}
+        if field == 'name':
+            data['name'] = value
+            return self.save(data, expected_revision, allow_system_update=allow_system_update)
+        if previous['kind'] != 'user':
+            raise ValueError('系統模組 ID 固定；可改外顯名稱，或先複製為使用者模組')
+        identifier(value)
+        if value == module_id:
+            return data
+        if value.casefold() == module_id.casefold():
+            raise ValueError('新 ID 不可只變更大小寫；請使用不同 ID')
+        for kind in ('system', 'user'):
+            directory = safe_path(self.profile.definitions_root, self.profile.modules_root + '/' + kind)
+            if directory.exists() and any(p.stem.casefold() == value.casefold() for p in directory.glob('*.json')):
+                raise ValueError('新 Module ID 已存在，不覆寫既有檔案')
+        references = self._id_references(module_id)
+        if references:
+            raise ValueError('此 ID 仍被引用，請先解除綁定或只改外顯名稱：' + '；'.join(references[:12]))
+        data.update(id=value, version=previous['version'] + 1)
+        data = validate_module(data, self.profile.step_validator)
+        original = safe_path(self.profile.definitions_root, f'{self.profile.modules_root}/user/{module_id}.json')
+        destination = safe_path(self.profile.definitions_root, f'{self.profile.modules_root}/user/{value}.json')
+        backup = safe_path(self.profile.definitions_root, f'{self.profile.modules_root}/user/backups/renamed_{module_id}_{uuid.uuid4().hex}.json')
+        atomic_json(backup, {key: item for key, item in previous.items() if key != 'kind'})
+        atomic_json(destination, data)
+        try:
+            original.unlink()
+        except OSError:
+            destination.unlink(missing_ok=True)
+            raise
+        from .record_retention import enforce
+        enforce(self.profile.definitions_root, 'backups', f'{self.profile.modules_root}/user/backups', protected={backup.name})
+        return data
+
+    def _id_references(self, module_id):
+        references = ['排程角色 ' + role for role, target in self.scheduler().items() if target == module_id]
+        from .decision_graph import DecisionGraphStore
+        graphs = DecisionGraphStore(self.profile, self)
+        for item in graphs.catalog():
+            graph, _ = DecisionGraphStore(self.profile, self, item['id']).load_for_edit()
+            if graph and any(node.get('module') == module_id for node in graph['nodes']):
+                references.append('Canvas ' + item['name'])
+        # Refuse to orphan either legacy offsets or per-resolution Step overrides.
+        for root in dict.fromkeys((self.profile.definitions_root, self.root)):
+            for relative, label in ((self.profile.data_root + '/scheduler/module_display_mapping.json', '解析度映射'),
+                                    (self.profile.data_root + '/calibration/profiles.json', 'Step 校正')):
+                path = safe_path(root, relative)
+                if path.exists():
+                    data = json.loads(path.read_text(encoding='utf-8-sig'))
+                    if not isinstance(data, dict) or not isinstance(data.get('profiles'), dict):
+                        raise ValueError('無法確認引用：' + label + '存檔無效')
+                    if any(module_id in modules for modules in data['profiles'].values()):
+                        references.append(label)
+        return references
 
     @definition_edit
     def delete(self, module_id, expected_revision):

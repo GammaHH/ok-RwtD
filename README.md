@@ -91,22 +91,34 @@ _✨ Rogue with the Dead 視覺化自動化工具｜讓每一步決策都由你�
 
 > 最新版本可能只提供程式更新。需要首次安裝時，請到 [v1.0.0 安裝包](https://github.com/GammaHH/ok-RwtD/releases/tag/v1.0.0) 選擇 Global、Web 或其他安裝格式，再從啟動器更新。
 
+目前原生介面採用 **Qt 3**；既有 Global／Web 啟動器更新後共用此介面。更新時請等待依賴安裝完成，並完整重新啟動 OK。
+
 | 版本 / Edition | 說明 / Description |
 |---|---|
 | **Global Setup** | 原生 Qt 桌面完整安裝版，一般使用者建議優先使用。 |
 | **Global Portable ZIP** | 內含本機執行環境的免安裝包，解壓縮後啟動。 |
 | **Online Setup** | 小型線上安裝器，首次設定時下載程式及執行環境。 |
 | **ZIP** | 免安裝線上啟動器，首次設定需網路。 |
-| **Web Setup — Experimental** | WebView／Dashboard Task 入口完整安裝版；啟動與 Task 相容性尚未完整驗證。 |
-| **Web Portable ZIP — Experimental** | WebView／Dashboard Task 入口免安裝包；啟動與 Task 相容性尚未完整驗證。 |
+| **Web Setup — 相容設定檔** | 舊安裝包提供 WebView 入口，更新後與 Global 共用 Qt 3 介面。 |
+| **Web Portable ZIP — 相容設定檔** | 舊免安裝包提供 WebView 入口，更新後與 Global 共用 Qt 3 介面。 |
 
 離線包包含本機執行環境；**更新及 Discord 等連線功能仍需要網路**。
 
+## 配色與流程管理
+
+- **RwtD 配色設定 TASK**：選色器、色碼與即時預覽；儲存後同步 Qt 和 Dashboard。預設採深靛藍／紫色，配色存在持久資料目錄。
+- **模組版本回歸**：顯示本機備份與差異，回復內容後另存為遞增版本；複製模組從 r1 開始。
+- **共用垃圾桶**：從介面刪除的模組與 Canvas 都會保存備份，可還原或永久刪除指定備份。同 ID 項目不覆寫。
+- **Canvas 整理**：重設視角顯示全部節點；自動排列依 Chain 分組，單一路徑保持整齊直條。
+
+這些頁面由 Qt 任務列表啟動；結束任務後，請從 Qt 重新啟動並使用新產生的本機網址。
+
 ## Canvas 下載
 
+可先下載範本，或從下方的流程管理功能編輯自己的設定。
+
 - [亡途第一關V2.6.5](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/decision.json)
-- [亡途第三關V1.6.2](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_2c79ed548e63429194ce162529ba92ca.json)
-  - [再次遠征模組 JSON](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/modules/user/expedition_again.json)
+- [亡途第三關V1.6.1_newest](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_2c79ed548e63429194ce162529ba92ca.json)
 - [亡途第四關V1.6.9](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_88e97997de90421fa51b14a6e9a657f2.json)
 - [亡途第二關V1.6.4](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_641e5cc1189d4b19979097aeae75b319.json)
 - [亡途第五關V1.8](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_d931bc96c5004aff9ef660852ef3192b.json)
@@ -115,6 +127,13 @@ _✨ Rogue with the Dead 視覺化自動化工具｜讓每一步決策都由你�
 - [亡途常夜之國V1.2.1](https://raw.githubusercontent.com/GammaHH/ok-RwtD/main/assets/rwtd/scheduler/canvases/Canvas_b334b301300e4678915fbf89a1d78ef7.json)
 
 以上是公開更新庫目前的範本。請儲存連結的 JSON，在 Dashboard 建立或選取 Canvas，使用「匯入 Canvas 草稿」載入，檢查引用的模組後儲存。
+
+## 模組下載
+
+- [使用者模組](https://github.com/GammaHH/ok-RwtD/tree/main/assets/rwtd/modules/user)：自動遠征、再次遠征、活動刷取等範本。
+- [系統模組](https://github.com/GammaHH/ok-RwtD/tree/main/assets/rwtd/modules/system)：士兵強化、結算、商店領獎等範本。
+
+首次啟動會載入隨程式附帶的範本；持久資料建立後，更新保留本機編輯，新的範本需另外匯入。
 
 ## 本機資料與更新
 
@@ -145,3 +164,7 @@ _✨ Rogue with the Dead 視覺化自動化工具｜讓每一步決策都由你�
 ---
 
 **Keywords:** Rogue with the Dead, ok-RwtD, automation, Canvas, visual workflow, decision nodes, OCR, template matching, Farm scheduler, Android, USB debugging, Dashboard, OK-Script, Python, Windows
+
+## 開發資料
+
+私人開發庫為 GammaHH/ok-RwtD-dev。發佈與同步流程見 [REPOSITORY_PUBLICATION.md](docs/rwtd/REPOSITORY_PUBLICATION.md)。
