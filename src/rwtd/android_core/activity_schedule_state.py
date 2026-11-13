@@ -23,7 +23,11 @@ class ActivityScheduleState:
 
     @staticmethod
     def _identity(entry):
-        return [entry['canvas_id'], entry['interval_seconds'], entry['initial_runs']]
+        identity = [entry['canvas_id'], entry['interval_seconds'], entry['initial_runs']]
+        # Keep legacy identities stable when the optional countdown is absent.
+        if entry.get('first_delay_seconds') is not None:
+            identity.append(entry['first_delay_seconds'])
+        return identity
 
     def restore(self, entry):
         row = self.records.get(entry['id'])

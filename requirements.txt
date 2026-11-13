@@ -68,9 +68,12 @@ numpy==2.5.4
     #   shapely
 ok-d3dshot==0.1.5
     # via ok-script
-ok-pyside-minimal==6.12.0.post2
-    # via ok-script
-ok-script[adb,default,ocr,qt]==3.0.0b3
+# Official Qt is required by the diagnosis UI (QtSvgWidgets).
+# Never install ok-pyside-minimal alongside these shared-namespace packages.
+PySide6==6.12.0
+PySide6-Addons==6.12.0
+PySide6-Essentials==6.12.0
+ok-script[adb,default,ocr]==3.0.0b3
     # via ok-script-app (pyproject.toml)
 onnxocr-ppocrv5==0.0.22
     # via ok-script
@@ -139,7 +142,7 @@ rpds-py==2026.9.1
 shapely==2.2.0
     # via onnxocr-ppocrv5
 shiboken6==6.12.0
-    # via ok-pyside-minimal
+    # via PySide6
 six==1.17.0
     # via pynput
 sse-starlette==3.6.0

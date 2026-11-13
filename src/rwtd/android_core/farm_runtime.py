@@ -110,6 +110,7 @@ class FarmRuntime:
             interval = entry.get('interval_seconds')
             due = entry.get('first_due')
             initial_runs = entry.get('initial_runs',1)
+            first_delay = entry.get('first_delay_seconds')
             max_pending_runs = entry.get('max_pending_runs', 0)
             if not isinstance(key, str) or not key or key in ids:
                 raise ValueError('活動 ID 必須非空且不可重複')
@@ -119,6 +120,8 @@ class FarmRuntime:
                 raise ValueError('活動到期時間無效')
             if type(initial_runs) is not int or not 0 <= initial_runs <= 1000:
                 raise ValueError('首次活動次數必須是 0 至 1000 的整數')
+            if first_delay is not None and (type(first_delay) is not int or not 0 <= first_delay <= 365*86400):
+                raise ValueError('首次倒數必須是 0 至 365 天的整數秒數')
             if type(max_pending_runs) is not int or not 0 <= max_pending_runs <= 1000:
                 raise ValueError('活動最多累積場數必須是 0 至 1000 的整數')
             from .retreatable_km import with_stage, resolve_graph
@@ -130,7 +133,9 @@ class FarmRuntime:
                              'canvas_id':entry.get('canvas_id',key),
                              'interval_seconds':interval,
                              'max_pending_runs':max_pending_runs,
-                             'next_due':(schedule_clock()+(interval if initial_runs==0 else 0)) if due is None else due,
+                             'first_delay_seconds':first_delay,
+                             'next_due':(schedule_clock()+(first_delay if first_delay is not None else
+                                          interval if initial_runs==0 else 0)) if due is None else due,
                              'status':'WAITING', 'time_guards':entry.get('time_guards') or TimeGuards(),
                              'initial_runs':initial_runs, 'initial_completed':initial_runs==0,
                              'initial_runs_left':initial_runs,
@@ -151,7 +156,7 @@ class FarmRuntime:
             result = {key:copy.deepcopy(value) for key,value in entry.items() if key not in {'graph','time_guards'}}
             if entry:
                 slots = self._activity_due_slots(entry, now)
-                initial = entry['initial_runs_left'] if slots and not entry.get('deferred_runs') else 0
+                initial = entry['initial_runs_left'] if (slots or entry.get('first_delay_seconds') is not None) and not entry.get('deferred_runs') else 0
                 result['scheduled_pending_runs'] = self._scheduled_activity_runs(entry, slots, initial)
             return result
         data = public(self.activity or {})
@@ -188,7 +193,7 @@ class FarmRuntime:
 
     @staticmethod
     def _scheduled_activity_runs(entry, slots, initial_runs):
-        periodic = slots - int(bool(initial_runs))
+        periodic = slots - int(bool(initial_runs) and entry.get('first_delay_seconds') is None)
         limit = entry['max_pending_runs']
         return initial_runs + (min(periodic, limit) if limit else periodic)
 
@@ -199,9 +204,10 @@ class FarmRuntime:
             manual_runs = self.activity.pop('manual_runs', 0)
             slots = self._activity_due_slots(self.activity, self.activity_clock())
             initial_runs = self.activity['initial_runs_left'] if not deferred_runs else 0
-            # The first scheduled slot carries the configured initial batch.
-            # Later slots each add one run, even if no safe handoff was available.
-            consumed_slots = max(1, slots) if initial_runs else slots
+            # Legacy schedules carry the initial batch in their first slot.
+            # A custom countdown separates immediately available initial runs
+            # from periodic recovery; running that batch must not advance its deadline.
+            consumed_slots = max(1, slots) if initial_runs and self.activity.get('first_delay_seconds') is None else slots
             scheduled_runs = self._scheduled_activity_runs(self.activity, consumed_slots, initial_runs)
             self.activity['next_due'] += consumed_slots * self.activity['interval_seconds']
             self.activity['batch_runs'] = manual_runs + deferred_runs + scheduled_runs
@@ -680,6 +686,7 @@ class FarmRuntime:
                     return
                 due_activities = [entry for entry in self.activities
                                   if entry.get('deferred_runs') or entry.get('manual_runs',0)>0
+                                  or (entry.get('first_delay_seconds') is not None and entry['initial_runs_left'] > 0)
                                   or self.activity_clock() >= entry['next_due']]
                 if normal_round:
                     self.activity_queue = due_activities

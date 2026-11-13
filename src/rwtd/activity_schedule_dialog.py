@@ -28,7 +28,8 @@ class ActivityScheduleDialog(QDialog):
         layout = QVBoxLayout(self)
         hint = QLabel('FARM 正常整輪結束後，依列表順序執行到期活動。\n'
                       '首次次數設 0：已刷完，先等滿間隔；設 3：首次連跑三次。\n'
-                      '後續從活動完成起計時，每次到期執行一次。儲存後於下次啟動 FARM 生效。')
+                      '可選首次回復倒數：首次次數先跑，倒數決定額外一場何時回復，之後依原間隔累積。\n'
+                      '倒數從排程啟用時計算，重啟保留；修改倒數設定會重新計時。儲存後於下次啟動 FARM 生效。')
         hint.setWordWrap(True)
         layout.addWidget(hint)
         scroll = QScrollArea()
@@ -86,6 +87,21 @@ class ActivityScheduleDialog(QDialog):
         form.addRow('活動 Canvas', canvas)
         initial = self.spin(saved.get('initial_runs', 1), 1000)
         form.addRow('首次連跑次數（0＝先等待）', initial)
+        delay_keys = ('first_delay_days', 'first_delay_hours', 'first_delay_minutes')
+        use_delay = QCheckBox('自訂首次回復倒數（可選）')
+        use_delay.setChecked(any(key in saved for key in delay_keys))
+        form.addRow(use_delay)
+        delay_box = QWidget()
+        delay_layout = QHBoxLayout(delay_box)
+        delay_units = []
+        for key, label, maximum in zip(delay_keys, ('天', '小時', '分鐘'), (365, 8760, 525600)):
+            field = self.spin(saved.get(key, 0), maximum)
+            delay_layout.addWidget(field)
+            delay_layout.addWidget(QLabel(label))
+            delay_units.append(field)
+        delay_box.setVisible(use_delay.isChecked())
+        use_delay.toggled.connect(delay_box.setVisible)
+        form.addRow('首次倒數', delay_box)
         interval = QHBoxLayout()
         units = []
         for key, label, maximum in (('interval_days','天',365),
@@ -103,7 +119,8 @@ class ActivityScheduleDialog(QDialog):
         form.addRow('定期排程最多累積場數（0＝不限）', max_pending)
         layout.addLayout(form)
         row = dict(box=box, enabled=enabled, name=name, canvas=canvas,
-                   initial=initial, units=units, max_pending=max_pending, extra=dict(saved))
+                   initial=initial, units=units, max_pending=max_pending, extra=dict(saved),
+                   use_delay=use_delay, delay_units=delay_units)
         self.rows.append(row)
         self.row_layout.insertWidget(len(self.rows)-1, box)
         remove.clicked.connect(lambda: self.remove_row(row))
@@ -132,6 +149,10 @@ class ActivityScheduleDialog(QDialog):
                 enabled=row['enabled'].isChecked(), canvas=row['canvas'].currentData(),
                 initial_runs=row['initial'].value(), interval_days=days,
                 interval_hours=hours, interval_minutes=minutes, max_pending_runs=row['max_pending'].value()))
+            for key, widget in zip(('first_delay_days', 'first_delay_hours', 'first_delay_minutes'), row['delay_units']):
+                rows[-1].pop(key, None)
+                if row['use_delay'].isChecked():
+                    rows[-1][key] = widget.value()
         try:
             resolve_activity_schedules({ENABLED_KEY: True, SCHEDULES_KEY: rows},
                                       self.catalog, self.main_canvas_id)

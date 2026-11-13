@@ -36,6 +36,16 @@ window.createFarmWorkspacePanel=function(api){
     input.oninput=()=>{entry[key]=Number(input.value);mark();};
     field.append(input);row.append(field);
    }
+   const firstDelay=document.createElement('label'),useDelay=document.createElement('input');useDelay.type='checkbox';
+   const delayKeys=['first_delay_days','first_delay_hours','first_delay_minutes'];
+   useDelay.checked=delayKeys.some(key=>Object.hasOwn(entry,key));firstDelay.append(useDelay,document.createTextNode('自訂首次回復倒數（可選）'));row.append(firstDelay);
+   const delayFields=document.createElement('div');delayFields.className='toolbar';delayFields.style.display=useDelay.checked?'':'none';
+   for(const [key,label,max]of [['first_delay_days','天',365],['first_delay_hours','小時',8760],['first_delay_minutes','分鐘',525600]]){
+    const field=document.createElement('label'),input=document.createElement('input');field.textContent='首次倒數 '+label;input.type='number';input.min='0';input.step='1';input.max=String(max);input.value=entry[key]??0;
+    input.oninput=()=>{entry[key]=Number(input.value);mark();};field.append(input);delayFields.append(field);
+   }
+   useDelay.onchange=()=>{if(useDelay.checked){for(const key of delayKeys)entry[key]=0;}else{for(const key of delayKeys)delete entry[key];}mark();render();};
+   const delayHint=document.createElement('small');delayHint.textContent='首次次數先執行；倒數由排程啟用時開始，決定下一場回復時間，之後依原間隔累積。重啟保留倒數；修改倒數設定會重新計時。';delayFields.append(delayHint);row.append(delayFields);
    const remove=document.createElement('button');remove.type='button';remove.textContent='移除';remove.onclick=()=>{activities=activities.filter(a=>a!==entry);mark();render();};row.append(remove);rows.append(row);
   }paint();}
   add.onclick=()=>{activities.push({id:'event_'+crypto.randomUUID(),canvas:canvases[0]?.id||'',enabled:true,initial_runs:1,interval_minutes:190});mark();render();};
@@ -58,4 +68,3 @@ window.createFarmWorkspacePanel=function(api){
  save.onclick=()=>{try{const settings=structuredClone(expected);for(const [key,input]of inputs){const value=expected[key];settings[key]=typeof value==='boolean'?input.checked:typeof value==='number'?Number(input.value):input.value;}if(Object.hasOwn(settings,'activity_schedules'))settings.activity_schedules=JSON.stringify(activities);act('farm_save',{settings,expected});}catch(error){status.textContent=error.message;}};
  return {element:root,refresh,canLeave:()=>busy?'FARM 設定／指令仍在處理中。':dirty?'FARM 有未儲存設定，請先儲存。':state.running?'請先手動停止 FARM，等待退出後再切換。':''};
 };
-
