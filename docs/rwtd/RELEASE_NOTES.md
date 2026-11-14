@@ -1,21 +1,18 @@
-## 活動首次回復倒數
+## 修正更新後無法開啟診斷頁
 
-- Dashboard 與 Qt 活動排程編輯器新增可選「自訂首次回復倒數」，可設定天／小時／分鐘。
-- 首次次數仍照常先跑。例如首次 2 次、首次倒數 30 分鐘、間隔 3 小時：先跑 2 次，排程啟用後 30 分鐘回復下一場，之後每 3 小時再回復一場。
-- 到期活動仍等正常 FARM 整輪完成後插入；倒數與待辦跨重啟保存，沿用定期場次累積上限。
-- 不勾選時保留舊規則及既有計時紀錄；修改首次倒數設定會重新計時。
+- 公開更新庫內嵌的 OK 框架更新為 OK-Script 3.0.0b3，與目前 Qt 3 介面一致。
+- 移除舊框架殘留，修正 working/ok 優先載入舊版、導致找不到 ok.ui.qt.debug.diagnosis_page 的啟動錯誤。
+- 補齊診斷頁、Qt 元件與主介面所需框架檔案，保留套件授權並附 274 個檔案的 SHA-256 清單。
+- 打包準備階段檢查 Qt 3 必要檔案與 SDK pin，避免誤用舊 working 目錄作為框架來源。
 
-## Qt 安裝相容性
+## 驗證
 
-- 使用完整官方 PySide6／Addons／Essentials／shiboken6 6.12.0，移除會帶入 minimal Qt 的 ok-script qt extra，避免缺少 QtSvgWidgets。
-- 曾安裝 minimal Qt 的環境需先完全退出 OK，使用 dev_tools/Repair-InstalledQt.ps1 備份並重裝一致的官方 Qt；只更改 requirements 不會清除已安裝的衝突套件。
-- 若啟動錯誤為找不到 ok.ui.qt.debug.diagnosis_page，使用 dev_tools/Repair-InstalledFramework.ps1 將 working/ok 的舊框架備份移開，改載入 site-packages 中的 Qt 3 框架。
-- 修復工具不啟動 FARM，也不更動 Canvas、模組、SQLite 或 working/configs。
+使用者執行公開庫驗證並通過：274 個框架檔案集合與雜湊一致；實際從公開庫 ok/__init__.py 載入，主視窗、RwtD 診斷頁及 Globals 匯入成功，使用 Qt 6.12.0。驗證沒有啟動 FARM 或操作手機；本版完整自動更新及主介面啟動仍待實機確認。
 
-## 驗證與更新
+## 更新方式
 
-- 使用者執行首次倒數、活動排程、FARM 擁有權及 Qt 表單測試：69 項通過。
-- 使用者執行安裝版框架匯入驗證，並確認 v1.1.8 在官方 Qt 6.12.0 下主介面可正常啟動。v1.1.9 完整自動升級流程尚未實機驗證。
-- 修正 FARM 測試替身清理整個 sys.modules、導致 NumPy／OpenCV 在同一程序重複初始化的問題。
-- 本次為程式碼與依賴更新，未重新打包完整安裝程式。更新後須完全退出並重新啟動 OK。
-- 不發布個人 Canvas、模組草稿、備份或資料庫。
+從啟動器選擇 v1.1.10 更新，完成後完整退出並重新啟動 OK。不需要卸載，不會重設使用者 Canvas、模組、設定或 SQLite。
+
+本次為程式碼／框架更新，未重新製作完整安裝包；保留 v1.1.9 標籤及其下載產物，不將舊安裝包改標為 v1.1.10。
+
+[完整變更](https://github.com/GammaHH/ok-RwtD/compare/v1.1.9...v1.1.10)

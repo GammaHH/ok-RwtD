@@ -1,13 +1,18 @@
 # process.py
 import argparse
+import atexit
 import ctypes
 import glob
 import hashlib
+import json
 import os
 import re
 import subprocess
+import sys
+import tempfile
 import threading
 import time
+import traceback
 from ctypes import wintypes
 
 import psutil
@@ -18,6 +23,12 @@ logger = Logger.get_logger(__name__)
 
 WINDOWS_START_METHOD_START = 'start'
 WINDOWS_START_METHOD_OS_STARTFILE = 'os.startfile'
+
+_mutex_handle = None
+_mutex_owner_file = None
+_mutex_cleanup_registered = False
+_exit_watchdog_lock = threading.Lock()
+_exit_watchdog_started = False
 
 
 def is_admin():
@@ -39,7 +50,255 @@ def run_in_new_thread(func):
     return thread
 
 
-def check_mutex():
+def _write_shutdown_thread_dump():
+    """Persist all live Python stacks without depending on logging shutdown."""
+    from ok.util.file import ensure_dir_for_file, get_relative_path
+
+    output_file = get_relative_path(os.path.join('logs', 'shutdown_thread_dumps.txt'))
+    ensure_dir_for_file(output_file)
+    threads = {thread.ident: thread for thread in threading.enumerate()}
+    dumps = []
+    for thread_id, frame in sys._current_frames().items():
+        thread = threads.get(thread_id)
+        name = thread.name if thread else 'unknown'
+        daemon = thread.daemon if thread else 'unknown'
+        dumps.append(
+            f'Stack for thread {thread_id} (name={name}, daemon={daemon}):\n'
+            + ''.join(traceback.format_stack(frame)))
+    with open(output_file, 'w', encoding='utf-8') as file:
+        file.write('\n\n'.join(dumps))
+    return output_file
+
+
+def start_exit_watchdog(grace_period=3.0, exit_code=0, force_exit=None):
+    """Force termination if Python remains alive after shutdown is requested.
+
+    The watchdog is daemonized, so a normal interpreter exit cancels it. It is
+    armed by the Qt adapter after QApplication.exec() returns, or by an explicit
+    MCP process-exit request before cleanup. A remaining non-daemon worker or
+    blocked cleanup must not keep a runtime that is shutting down alive.
+    """
+    global _exit_watchdog_started
+    with _exit_watchdog_lock:
+        if _exit_watchdog_started:
+            return None
+        _exit_watchdog_started = True
+
+    grace_period = max(0, grace_period)
+    normalized_exit_code = exit_code if isinstance(exit_code, int) else 0
+    hard_exit = force_exit or os._exit
+
+    def watch():
+        time.sleep(grace_period)
+        live_threads = [
+            f'{thread.name}(daemon={thread.daemon}, ident={thread.ident})'
+            for thread in threading.enumerate()
+            if thread is not threading.current_thread() and thread.is_alive()
+        ]
+        logger.warning(
+            'Shutdown grace period expired; forcing process exit. '
+            f'Live threads: {live_threads}')
+        try:
+            dump_file = _write_shutdown_thread_dump()
+            logger.warning(f'Shutdown thread stacks written to {dump_file}')
+        except Exception as error:
+            logger.error(f'Could not write shutdown thread stacks: {error}')
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:
+            pass
+        hard_exit(normalized_exit_code)
+
+    thread = threading.Thread(target=watch, name='ExitWatchdog', daemon=True)
+    thread.start()
+    if force_exit is None:
+        # Diagnostics are best-effort: a deadlocked logging handler or stalled
+        # filesystem must not defeat the actual shutdown guarantee.
+        def force_without_diagnostics():
+            time.sleep(grace_period + 1.0)
+            os._exit(normalized_exit_code)
+
+        threading.Thread(
+            target=force_without_diagnostics,
+            name='ExitWatchdogFallback', daemon=True).start()
+    return thread
+
+
+def _normalized_path(path):
+    if not path:
+        return None
+    return os.path.normcase(os.path.realpath(os.path.abspath(path)))
+
+
+def _current_app_signature():
+    entry = sys.argv[0] if sys.argv and sys.argv[0] and not sys.argv[0].startswith('-') else None
+    return _normalized_path(sys.executable), _normalized_path(os.getcwd()), _normalized_path(entry)
+
+
+def _interpreter_paths(executable, allow_console_pair=False):
+    expected = {_normalized_path(executable)}
+    if allow_console_pair and os.path.basename(executable).lower() in ('python.exe', 'pythonw.exe'):
+        expected.update(_normalized_path(os.path.join(os.path.dirname(executable), name))
+                        for name in ('python.exe', 'pythonw.exe'))
+    return expected
+
+
+def _process_matches_app(proc, executable, working_directory, entry_script, allow_console_pair=False):
+    """Strictly identify another invocation without matching unrelated Python jobs."""
+    try:
+        if proc.pid in (os.getpid(), os.getppid()):
+            return False
+        command = proc.cmdline()
+        # Windows virtual-environment redirectors can report the base Python
+        # binary as proc.exe(), while argv[0] identifies the actual environment.
+        interpreters = {_normalized_path(proc.exe())}
+        if command and os.path.isabs(command[0]):
+            interpreters.add(_normalized_path(command[0]))
+        expected = _interpreter_paths(executable, allow_console_pair)
+        if not interpreters & expected:
+            return False
+        process_cwd = _normalized_path(proc.cwd())
+        if process_cwd != working_directory:
+            return False
+        if entry_script is None:
+            return True
+        for argument in command:
+            if not argument or argument.startswith('-'):
+                continue
+            candidate = argument if os.path.isabs(argument) else os.path.join(process_cwd, argument)
+            if _normalized_path(candidate) == entry_script:
+                return True
+        return False
+    except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
+        return False
+
+
+def _read_owner_info(owner_file):
+    try:
+        with open(owner_file, 'r', encoding='ascii') as file:
+            value = json.load(file)
+        if isinstance(value, int) and not isinstance(value, bool):
+            return {'pid': value}  # Legacy PID-only markers.
+        if isinstance(value, dict) and type(value.get('pid')) is int:
+            return value
+    except (OSError, ValueError, TypeError):
+        pass
+    return {}
+
+
+def _read_owner_pid(owner_file):
+    return _read_owner_info(owner_file).get('pid')
+
+
+def _find_previous_instances(owner_file, replace_console=False):
+    executable, working_directory, entry_script = _current_app_signature()
+    info = _read_owner_info(owner_file)
+    owner_pid = info.get('pid')
+    if owner_pid and owner_pid not in (os.getpid(), os.getppid()):
+        try:
+            owner = psutil.Process(owner_pid)
+            created = info.get('create_time')
+            if created is not None and owner.create_time() != created:
+                return []  # The PID was reused after the old application exited.
+            if replace_console:
+                if info.get('mode') == 'gui':
+                    return []
+                recorded_executable = info.get('executable')
+                if (recorded_executable is not None
+                        and _normalized_path(recorded_executable) not in _interpreter_paths(executable, True)):
+                    return []
+                # A recorded console owner can have a different entry script:
+                # start_mcp.py and start_gui.py are the same project instance.
+                # Only widen matching for this PID, never for the process scan.
+                base_executable = getattr(sys, '_base_executable', None) or executable
+                matches = _process_matches_app(owner, executable, working_directory, None,
+                                               allow_console_pair=True)
+                if not matches:
+                    # Some Windows venv redirectors rewrite both exe() and
+                    # argv[0]. When available, the recorded environment was
+                    # checked above; verify the real binary against base Python.
+                    matches = _process_matches_app(owner, base_executable, working_directory, None,
+                                                   allow_console_pair=True)
+                if matches:
+                    if info.get('mode') == 'console':
+                        return [owner]
+                    command = owner.cmdline()
+                    if command and os.path.basename(command[0]).lower() == 'python.exe':
+                        return [owner]  # Console owner written by an older version.
+                return []
+            if _process_matches_app(owner, executable, working_directory, entry_script):
+                return [owner]
+            if (_normalized_path(info.get('executable')) == executable
+                    and _process_matches_app(owner, getattr(sys, '_base_executable', None) or executable,
+                                             working_directory, entry_script)):
+                return [owner]
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+    if replace_console:
+        return []
+    # Compatibility fallback for a hung instance from a version that did not
+    # yet write the PID marker. The complete signature is still required.
+    if entry_script is None:
+        return []
+    matches = []
+    for proc in psutil.process_iter():
+        if _process_matches_app(proc, executable, working_directory, entry_script):
+            matches.append(proc)
+    return matches
+
+
+def _terminate_previous_instances(owner_file, replace_console=False):
+    terminated = False
+    for proc in _find_previous_instances(owner_file, replace_console=replace_console):
+        try:
+            kind = 'console' if replace_console else 'application'
+            logger.warning(f'Terminating previous {kind} instance pid={proc.pid}')
+            proc.kill()
+            terminated = True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, OSError) as error:
+            logger.error(f'Could not terminate previous instance pid={proc.pid}: {error}')
+    return terminated
+
+
+def _release_mutex():
+    global _mutex_handle, _mutex_owner_file
+    if _mutex_handle:
+        try:
+            ctypes.windll.kernel32.CloseHandle(_mutex_handle)
+        except (AttributeError, OSError):
+            pass
+        _mutex_handle = None
+    if _mutex_owner_file and _read_owner_pid(_mutex_owner_file) == os.getpid():
+        try:
+            os.unlink(_mutex_owner_file)
+        except OSError:
+            pass
+    _mutex_owner_file = None
+
+
+def _retain_mutex(handle, owner_file, gui=False):
+    global _mutex_handle, _mutex_owner_file, _mutex_cleanup_registered
+    _mutex_handle = handle
+    _mutex_owner_file = owner_file
+    try:
+        temporary = f'{owner_file}.{os.getpid()}.tmp'
+        with open(temporary, 'w', encoding='ascii') as file:
+            json.dump({'pid': os.getpid(), 'create_time': psutil.Process().create_time(),
+                       'executable': sys.executable, 'mode': 'gui' if gui else 'console'}, file)
+        os.replace(temporary, owner_file)
+    except OSError as error:
+        logger.warning(f'Could not record mutex owner: {error}')
+    if not _mutex_cleanup_registered:
+        atexit.register(_release_mutex)
+        _mutex_cleanup_registered = True
+
+
+def check_mutex(wait_time=5, kill_wait_time=3, gui=False):
+    """Acquire this project's instance lock, replacing its console owner for GUI startup."""
+    if _mutex_handle:
+        return True
     _LPSECURITY_ATTRIBUTES = wintypes.LPVOID
     _BOOL = ctypes.c_int
     _DWORD = ctypes.c_ulong
@@ -54,34 +313,57 @@ def check_mutex():
     path = os.getcwd()
     # Try to create a named mutex
     mutex_name = hashlib.md5(path.encode()).hexdigest()
+    owner_file = os.path.join(tempfile.gettempdir(), f'ok-script-{mutex_name}.pid')
     mutex = _CreateMutex(0, False, mutex_name)
+    if not mutex:
+        raise ctypes.WinError()
+    already_exists = _GetLastError() == _ERROR_ALREADY_EXISTS
     logger.info(f'_CreateMutex {mutex_name}')
     # Check if the mutex already exists
-    if _GetLastError() == _ERROR_ALREADY_EXISTS:
+    if already_exists:
         logger.error(
             f'Another instance of this application is already running {mutex_name}. Waiting for it to disappear.')
         print(f"Another instance of this application is already running. {mutex_name}")
-        wait_time = 10
-        start_time = time.time()
-        while time.time() - start_time < wait_time:
-            # Try to create the mutex again to check if the other instance has released it
+        # A contender's handle also keeps the named kernel object alive. Close
+        # it before polling, otherwise this process prevents its own recovery.
+        ctypes.windll.kernel32.CloseHandle(mutex)
+
+        def try_acquire():
             temp_mutex = _CreateMutex(0, False, mutex_name)
+            if not temp_mutex:
+                raise ctypes.WinError()
             if _GetLastError() != _ERROR_ALREADY_EXISTS:
-                # Mutex is gone, the other instance likely terminated
+                _retain_mutex(temp_mutex, owner_file, gui=gui)
                 logger.info(f"Mutex {mutex_name} disappeared. Proceeding.")
-                ctypes.windll.kernel32.CloseHandle(temp_mutex)  # Close the temporary mutex
-                return True  # Proceed with the current instance
-            ctypes.windll.kernel32.CloseHandle(temp_mutex)  # Close the temporary mutex
-            time.sleep(0.5)  # Wait a bit before retrying
-        # If mutex still exists after waiting, kill the other instance
+                return True
+            ctypes.windll.kernel32.CloseHandle(temp_mutex)
+            return False
+
+        if gui:
+            _terminate_previous_instances(owner_file, replace_console=True)
+
+        deadline = time.monotonic() + max(0, wait_time)
+        while time.monotonic() < deadline:
+            if try_acquire():
+                return True
+            time.sleep(0.25)
+
         logger.warning(
-            f"Mutex {mutex_name} still exists after {wait_time} seconds. Attempting to kill existing process.")
-        kill_exe(os.path.abspath(os.getcwd()))
-        # After attempting to kill, the mutex should eventually be released.
-        # You might want to add another short wait here or just let the mutex check
-        # in the next iteration of the main script loop handle it if it restarts.
-        return False  # Indicate that a mutex conflict was handled
-    return True  # No mutex conflict, proceed
+            f"Mutex {mutex_name} still exists after {wait_time} seconds; checking its recorded owner.")
+        if not _terminate_previous_instances(owner_file):
+            logger.error('No safely identifiable previous instance could be terminated.')
+            return False
+
+        deadline = time.monotonic() + max(0, kill_wait_time)
+        while time.monotonic() < deadline:
+            if try_acquire():
+                return True
+            time.sleep(0.25)
+        logger.error(f"Mutex {mutex_name} was not released after terminating its recorded owner.")
+        return False
+
+    _retain_mutex(mutex, owner_file, gui=gui)
+    return True
 
 
 def restart_as_admin():
@@ -368,7 +650,11 @@ def parse_arguments_to_map(description="main script"):
 
     # Add your arguments here.  This is just an example - adapt this to your needs!
     parser.add_argument("--help", action="help", help="show this help message and exit")
-    parser.add_argument("-t", "--task", help="which task to execute as index starting with 1", type=int, default=0)
+    parser.add_argument(
+        "-t", "--task",
+        help="which task to execute as 1-based index, task name, or class name",
+        type=str, default="0",
+    )
     parser.add_argument("-e", "--exit", action="store_true", help="exit after task")
     parser.add_argument("-h", "--headless", action="store_true", help="start without ui")
 
@@ -376,6 +662,16 @@ def parse_arguments_to_map(description="main script"):
 
     # Convert the args object to a dictionary
     arg_map = vars(args)  # vars() returns the __dict__ attribute of an object
+
+    # -t 支持数字索引（旧格式）或任务名/类名（新格式）：
+    # 数字原样转 int；名字/类名保持字符串，由运行时 get_task 解析为对应任务。
+    task = arg_map.get("task")
+    if isinstance(task, str):
+        stripped = task.strip()
+        if stripped.isdigit():
+            arg_map["task"] = int(stripped)
+        else:
+            arg_map["task"] = stripped
 
     return arg_map
 

@@ -1,3 +1,4 @@
+import threading
 import time
 
 from ok import Handler, og
@@ -12,7 +13,7 @@ logger = Logger.get_logger(__name__)
 
 class StartController:
     STARTED_WINDOW_MIN_SIZE = (100, 100)
-    STARTED_WINDOW_STABLE_SECONDS = 2
+    STARTED_WINDOW_STABLE_SECONDS = 5
     STARTED_WINDOW_POLL_INTERVAL = 0.2
 
     def __init__(self, app_config, exit_event):
@@ -21,9 +22,30 @@ class StartController:
         self.handler = Handler(exit_event, __name__)
         self.start_timeout = app_config.get('start_timeout', 60)
         windows_config = app_config.get('windows') or {}
+        self.window_stable_seconds = windows_config.get(
+            'window_stable_seconds', self.STARTED_WINDOW_STABLE_SECONDS)
         self.start_exe = windows_config.get('start_exe', True)
         self.start_method = windows_config.get('start_method', WINDOWS_START_METHOD_START)
         self.starting = False
+
+    @property
+    def _cancel_requested(self):
+        event = self.__dict__.get('_cancel_event')
+        if event is None:
+            event = self.__dict__['_cancel_event'] = threading.Event()
+        return event
+
+    def cancel_start(self):
+        """Stop waiting for the game to launch; the game process is left running."""
+        logger.info('cancel_start requested')
+        self._cancel_requested.set()
+
+    def _cancelled(self):
+        if self._cancel_requested.is_set():
+            logger.info('start cancelled while waiting for the game')
+            communicate.starting_emulator.emit(True, None, 0)
+            return True
+        return False
 
     def tr(self, message):
         app = getattr(og, "app", None)
@@ -48,12 +70,18 @@ class StartController:
 
     def do_start(self, task=None, exit_after=False):
         self.starting = True
+        self._cancel_requested.clear()
         try:
             return self._do_start(task, exit_after)
         finally:
             self.starting = False
 
     def _do_start(self, task=None, exit_after=False):
+        if (owner := getattr(getattr(og, 'executor', None), 'exclusive_owner', None)) is not None:
+            logger.info(f'do_start refused, executor held by {owner}')
+            communicate.starting_emulator.emit(
+                True, self.tr('Cannot start: the app is controlled by {owner}').format(owner=owner), 0)
+            return False
         communicate.starting_emulator.emit(False, None, self.start_timeout)
         tasks_to_enable = []
         try:
@@ -81,7 +109,7 @@ class StartController:
                 return True
         except Exception as e:
             logger.error(f'do_start resume exception: {e}', e)
-            communicate.starting_emulator.emit(True, self.tr(f'Start failed: {e}'), 0)
+            communicate.starting_emulator.emit(True, self.tr('Start failed: {error}').format(error=e), 0)
             return False
 
         try:
@@ -98,6 +126,7 @@ class StartController:
                     return False
             else:
                 logger.info('windows.start_exe is False, skip start_device')
+            self.check_auto_hdr()
             self.check_gpu_driver_post_processing()
 
             def add_task_to_enable(enable_task):
@@ -122,13 +151,15 @@ class StartController:
             return True
         except Exception as e:
             logger.error(f'do_start exception: {e}', e)
-            communicate.starting_emulator.emit(True, self.tr(f'Start failed: {e}'), 0)
+            communicate.starting_emulator.emit(True, self.tr('Start failed: {error}').format(error=e), 0)
             return False
 
     def _wait_until_device_ready(self, refresh_first=True):
         wait_until = time.time() + self.start_timeout
         first_check = True
         while not self.exit_event.is_set():
+            if self._cancelled():
+                return False
             if refresh_first or not first_check:
                 og.device_manager.do_refresh(True)
             first_check = False
@@ -151,6 +182,8 @@ class StartController:
         min_width, min_height = self.STARTED_WINDOW_MIN_SIZE
 
         while not self.exit_event.is_set():
+            if self._cancelled():
+                return False
             hwnd_window = getattr(og.device_manager, 'hwnd_window', None)
             if hwnd_window is not None:
                 hwnd_window.do_update_window_size()
@@ -161,8 +194,8 @@ class StartController:
                         logger.info(f'waiting for started window to stabilize, current size {size[0]}x{size[1]}')
                         stable_size = size
                         stable_since = now
-                    elif now - stable_since >= self.STARTED_WINDOW_STABLE_SECONDS:
-                        logger.info(f'started window size stable for {self.STARTED_WINDOW_STABLE_SECONDS}s: {size[0]}x{size[1]}')
+                    elif now - stable_since >= self.window_stable_seconds:
+                        logger.info(f'started window size stable for {self.window_stable_seconds}s: {size[0]}x{size[1]}')
                         return True
                 else:
                     stable_size = None
@@ -182,7 +215,7 @@ class StartController:
         if device and not device['connected']:
             if device['device'] == "windows" and not is_admin():
                 communicate.starting_emulator.emit(True,
-                                                   "PC version requires admin privileges, Please restart this app with admin privileges!",
+                                                   self.tr("PC version requires admin privileges, Please restart this app with admin privileges!"),
                                                    0)
                 communicate.restart_admin.emit()
                 return False
@@ -193,6 +226,12 @@ class StartController:
                 dx11_config = og.global_config.get_config('Launch with DX11')
                 if dx11_config and dx11_config.get('Launch with DX11'):
                     args = "-dx11 -d3d11 -force-d3d11"
+                if device['device'] == "windows":
+                    launch_arguments = (self.config.get('windows') or {}).get('launch_arguments')
+                    if callable(launch_arguments):
+                        launch_arguments = launch_arguments()
+                    if launch_arguments:
+                        args = f'{args or ""} {launch_arguments}'.strip()
                 if not execute(path, arguments=args, start_method=self.start_method):
                     communicate.starting_emulator.emit(True, self.tr("Start game failed, please start game first"), 0)
                     return False
@@ -208,6 +247,29 @@ class StartController:
             return False
         communicate.starting_emulator.emit(True, None, 0)
         return True
+
+    def check_auto_hdr(self):
+        if not (self.config.get('windows') or {}).get('check_auto_hdr', False):
+            return
+        try:
+            from ok.util.gpu_driver_settings import is_auto_hdr_enabled
+
+            device_manager = og.device_manager
+            device = device_manager.get_preferred_device()
+            if not device or device.get('device') != 'windows':
+                return
+            from ok.device.capture_methods.windows_graphics_hdr import WindowsGraphicsCaptureHDRMethod
+
+            if isinstance(getattr(device_manager, 'capture_method', None), WindowsGraphicsCaptureHDRMethod):
+                return
+            hwnd_window = getattr(device_manager, 'hwnd_window', None)
+            target_exe_path = getattr(hwnd_window, 'exe_full_path', None) or device.get('full_path')
+            if is_auto_hdr_enabled(target_exe_path):
+                message = self.tr('Auto HDR is enabled, tasks might not work correctly!')
+                logger.error(message)
+                alert_error(message, tray=True)
+        except Exception as e:
+            logger.error(f'check_auto_hdr exception: {e}', e)
 
     def check_gpu_driver_post_processing(self):
         try:
@@ -232,6 +294,9 @@ class StartController:
                 )
                 for feature in enabled_features
             ]
+            if any(feature.vendor == 'NVIDIA' and feature.feature in (
+                    'Filter Profile', 'RTX HDR', 'RTX Dynamic Vibrance') for feature in enabled_features):
+                warning_lines.append(self.tr('Try using Alt+F3 to turn it off.'))
             logger.warning('\n'.join(warning_lines))
             communicate.notification.emit(
                 '\n'.join(warning_lines),
@@ -313,7 +378,7 @@ class StartController:
                         hwnd_window.do_update_window_size()
                     if not og.device_manager.capture_method.hwnd_window.pos_valid:
                         return self.tr(
-                            f'Window is minimized or out of screen, and don\'t use full-screen exclusive mode!')
+                            'Window is minimized or out of screen, and don\'t use full-screen exclusive mode!')
             frame = self.try_capture_a_frame()
             if frame is None:
                 logger.error(f'check_device_error: try_capture_a_frame returned None')
@@ -348,7 +413,9 @@ class StartController:
     def try_capture_a_frame():
         start = time.time()
         while True:
-            frame = og.device_manager.capture_method.get_frame()
+            # A running executor may own the capture; wait for it rather than
+            # polling a lock it releases only briefly between frames.
+            frame = og.device_manager.capture_method.get_frame(busy_wait=1)
             if frame is not None:
                 return frame
             logger.info(f'try_capture_a_frame: frame is None, retrying...')

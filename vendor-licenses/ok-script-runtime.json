@@ -1,0 +1,1103 @@
+{
+  "schema_version": 1,
+  "package": "ok-script",
+  "version": "3.0.0b3",
+  "files": [
+    {
+      "path": "ok/__init__.py",
+      "sha256": "1035b19a606b4d102766fa23e0c2664355ef7b3b3939252a063d9625bd245a05"
+    },
+    {
+      "path": "ok/__main__.py",
+      "sha256": "590aac23fe159c766544d6794718b9bcc99fe81b9e30ccb5e30da87fd88c1388"
+    },
+    {
+      "path": "ok/cli.py",
+      "sha256": "b8d9f77309cfb4237547b641049091c6575085e0156cf2ab006477770554a514"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/develop/SKILL.md",
+      "sha256": "0f5bff87bb967c4938d79fa217e62326044dbc4829855cd4b212257cf2839ac0"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/develop/agents/openai.yaml",
+      "sha256": "eba93614556cd84a7245c24499a1ac3e025985fa35e5c5cc7366aabf7cf52477"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/develop/references/windows-input.md",
+      "sha256": "e722d31fb3047ad097523030a0880911f00ac005b12f718426a105fa4bd89844"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/generate-templates/SKILL.md",
+      "sha256": "3ad38ed59ce9043f2f2667ea10c2ed8247c461cab59685b618cdfe3befb52dd3"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/reload-tasks/SKILL.md",
+      "sha256": "db5347278779f99697fd96889ffea28799c6efe90533f78b2b51178bed309a2b"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/reload-tasks/agents/openai.yaml",
+      "sha256": "465f2bc8e740b809b4fba615764470146912c6af00644bb56e071ca0eb0bc369"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/setup-env/SKILL.md",
+      "sha256": "980c8d12f62369c64d2395fac3fe4b62644fa6bff5c3f0b318ae2eda12df4767"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/setup-env/agents/openai.yaml",
+      "sha256": "2ba521f997136c9f1ec5dcf85e5c1e0cc3b21d284777ff19a6c26d6be1ad706c"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/setup-env/assets/ok-script-develop/SKILL.md",
+      "sha256": "6fa867616919477cb980f7ba6a628711d28f7d1702e3efee6b098708016d272b"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/setup-project/SKILL.md",
+      "sha256": "22b05a6564c8b9f7b1c24a7f85b9d7618c4ef4251992150931eb15399ce03261"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/setup-project/agents/openai.yaml",
+      "sha256": "9014539161a8b6ce6cc3134a2b6d18b7da0eb3ae027e30449fb2a9f355e50b62"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/use_venv/SKILL.md",
+      "sha256": "6519e4915143dcfff9d178267a270f321f007142fd1221e5fd46d6b507099906"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/write-test/SKILL.md",
+      "sha256": "b68bea4cd547e1099f7c13880ed51c8290d451f8e64c8abaf95702d92d6bb213"
+    },
+    {
+      "path": "ok/agent_resources/.agents/skills/write-test/agents/openai.yaml",
+      "sha256": "32c99748de3ac458c82b068b9fed6642cce5bdc911d2678e9a0351f3f2c53578"
+    },
+    {
+      "path": "ok/agent_resources/docs/agent-setup.md",
+      "sha256": "636eb8034ae56658de43bd1145e9c5fc7a03a21136c59d45ddd650eae280fe68"
+    },
+    {
+      "path": "ok/agent_resources/docs/feature-crops.md",
+      "sha256": "d4372df8e77db2e5d90eb36b1096069d3ac6f15e4011986776abd967b6c51843"
+    },
+    {
+      "path": "ok/agent_resources/docs/mcp.md",
+      "sha256": "832f488c618430f6b46fbee44e9837cabfe83b1719edfd840d353f7422f4b16a"
+    },
+    {
+      "path": "ok/agent_resources/examples/mcp_observe.py",
+      "sha256": "1ef8495d02709dc306ac87bf947ba0ca741fb708a154b47dea9ac36245e13c75"
+    },
+    {
+      "path": "ok/alas/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/alas/emulator_base.py",
+      "sha256": "1aeb13ea26ccf09e32cf04572ba515cf267bafc88e1489735e255d821f1b3ec4"
+    },
+    {
+      "path": "ok/alas/emulator_windows.py",
+      "sha256": "c44d1a7a79dac0ef396bf35696d75c5fbbe2b1abd73017fc2ff4f1c74529e772"
+    },
+    {
+      "path": "ok/alas/platform_windows.py",
+      "sha256": "3aa1a032715dcf9d6093457f0ff580179c0c4f16fe2eaac6728931a86e72ea4e"
+    },
+    {
+      "path": "ok/alas/utils.py",
+      "sha256": "8be0f51a8403fec9a51d6aa3b2d442fc60cb8be7757270ac3bf496e87a6cf66d"
+    },
+    {
+      "path": "ok/assets/default-icon.png",
+      "sha256": "53d63fb5a4661960596066009f1c3590d678e5959463f3c43cdcec81d23b5ff3"
+    },
+    {
+      "path": "ok/capture/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/capture/adb/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/capture/adb/deep.py",
+      "sha256": "1058902625fcdb02f14a0acab9c354c8983807d83742d8d0f6b99e09df95e87e"
+    },
+    {
+      "path": "ok/capture/adb/minitouch.py",
+      "sha256": "c0bba965acfae232230dd59e937d008f0b99fc5f2e4b16f0409701b4d5abc5b6"
+    },
+    {
+      "path": "ok/capture/adb/nemu_ipc.py",
+      "sha256": "9e258ad28e9be28c6d7278fb161a34af4857213fb477cc67d63dfa655568547b"
+    },
+    {
+      "path": "ok/capture/adb/nemu_utils.py",
+      "sha256": "d187aa2adf9fa7f806f05138f543efc83ff3ee92bdccc94b75f677d9f5be5efd"
+    },
+    {
+      "path": "ok/capture/adb/pool.py",
+      "sha256": "4b77d068e337732e21ac0ca2f566bf4901fb72b7d335de7af93ee7cf17f8e415"
+    },
+    {
+      "path": "ok/capture/adb/timer.py",
+      "sha256": "665b732aed96243e51bd80b74b8f1f315c74abbf4f7967d9b410b4a765633e1f"
+    },
+    {
+      "path": "ok/capture/adb/util.py",
+      "sha256": "a6607f5baff8b4de344c5d8cbefc8bc84952f2842857da5f5585b74d10a645eb"
+    },
+    {
+      "path": "ok/capture/windows/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/capture/windows/d3d11.py",
+      "sha256": "12c901ddd464576489c426c2f250bc9b383b602b497b0eccbea463df288ce7dd"
+    },
+    {
+      "path": "ok/capture/windows/dump.py",
+      "sha256": "7687d39f3ebbf25c13d656acb49b3a01ea7cfdc4f75ddc8b5567ca5542baeab8"
+    },
+    {
+      "path": "ok/core/__init__.py",
+      "sha256": "fdf1df604eaca2827beb0b83930fbd4db7312177c2531d649d16eb30512649b4"
+    },
+    {
+      "path": "ok/core/capture_labels.py",
+      "sha256": "88ff37ac4b7158e8912c7ac8197ab88b2d71176c30f680c5521742241e32c972"
+    },
+    {
+      "path": "ok/core/code_runner.py",
+      "sha256": "5b63646416c27c3c839dcbdc7d23dadd332dc0624fa793b7fd227fb8adb10893"
+    },
+    {
+      "path": "ok/core/config_schema.py",
+      "sha256": "c78e3da77bcbaf604a544ed143641912faaa755fd0695ce7f66f5089480fe7e6"
+    },
+    {
+      "path": "ok/core/downloads.py",
+      "sha256": "35bb27bb827a0489285eddeac2c4d070b8bbdd8ac9f3c934f923db91f0b384c6"
+    },
+    {
+      "path": "ok/core/events.py",
+      "sha256": "2b2d0195207b5fc6f1dbfb557cd5028249268b4cc4a0e25a06fb61141e5bf61a"
+    },
+    {
+      "path": "ok/core/icons.py",
+      "sha256": "3202de4e21fb33f86044eae729b1fecbfc375ba0b3852e6c39177212109e8f74"
+    },
+    {
+      "path": "ok/core/mcp_runner.py",
+      "sha256": "f14da51d66a244a522ca297b7a53777b3b7c5cb7be5010db973a120c9e042bb9"
+    },
+    {
+      "path": "ok/core/mcp_server.py",
+      "sha256": "71c4a27823cb9740fc500573e7d4559867d7dec0a892dff0900796c073341e50"
+    },
+    {
+      "path": "ok/core/notifications.py",
+      "sha256": "65c17a600a6a914c2393908463f16600567208c6e305bd4fc5454e780fd17c77"
+    },
+    {
+      "path": "ok/core/plugin_staging.py",
+      "sha256": "b0b48f4ad7be1a0e0c1614cead9999c81784747e35c9b7115f6d6e7fa415cd59"
+    },
+    {
+      "path": "ok/core/plugins.py",
+      "sha256": "6ead075ab88516301ac08b5fc10c7b192db9bb2a25d0a2be5c6ef5040a75bb56"
+    },
+    {
+      "path": "ok/core/screenshot.py",
+      "sha256": "0221cd657e043cddaa463f73cd143e864c08e7a831dc6426b2337083de3e79b5"
+    },
+    {
+      "path": "ok/core/script_editing.py",
+      "sha256": "44565f16102d3b47e04e9039362c8d6b00f5569bd8646170301fb10baeb4b6db"
+    },
+    {
+      "path": "ok/core/script_packager.py",
+      "sha256": "ff3d07e27fc292e1e23fe1c5e0f761da1b26eafc2efe95e5632f78f01f90c8e0"
+    },
+    {
+      "path": "ok/core/script_templates.py",
+      "sha256": "ef4fa3a8615c21b68860db19e3da2f9dfbb51949d2afe43c47ff25f42a3280c8"
+    },
+    {
+      "path": "ok/core/skills.py",
+      "sha256": "efd9bd497d4113d240475bdf7c62acc2fe490f17ca92582d120d2397aa563d87"
+    },
+    {
+      "path": "ok/core/start_controller.py",
+      "sha256": "24c3ebcc1ca4d54fce20b1b16c98096183fb4ba499258bb72748534bda011426"
+    },
+    {
+      "path": "ok/core/task_manager.py",
+      "sha256": "038648736a90c965b8832f0d145797ba6072571de091a40ad383935862128a20"
+    },
+    {
+      "path": "ok/core/template_store.py",
+      "sha256": "1fb26460d82a7f46f1f25a37716ce174214564ac47a39f53331323660f9c0d77"
+    },
+    {
+      "path": "ok/core/translation.py",
+      "sha256": "4119d29e62c927d5eeb58c1c8686276528a6688bb100e78da0fcc31d880e8dfc"
+    },
+    {
+      "path": "ok/core/ui_config.py",
+      "sha256": "0b9276e038f3fb4b7b4d3fb31728106737800d9d55a25e514bd711ecb9cd4296"
+    },
+    {
+      "path": "ok/device/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/device/capture.py",
+      "sha256": "43f06a3ec4a3bc27e55d0dc2e9393f4a6b489f4def77472069399098db5bcf24"
+    },
+    {
+      "path": "ok/device/DeviceManager.py",
+      "sha256": "b3ca3599a9570ea1aef62db8b4d97f1d8d2e6e119a721b1a40545ee90f62e5f1"
+    },
+    {
+      "path": "ok/device/interaction.py",
+      "sha256": "bf7e92cd9fe9a200a949bafb796d0bd37db33cec59f017fcbbf6c595a7653d77"
+    },
+    {
+      "path": "ok/device/intercation.py",
+      "sha256": "3a39e188e9169b3b07e6ed7efbc308eb9f2864ecd16de70406b6dbebc94284f0"
+    },
+    {
+      "path": "ok/device/capture_methods/__init__.py",
+      "sha256": "22421e92efd99a77b09bc3cfbc174b0081aef870456230621ecb17b16d93d783"
+    },
+    {
+      "path": "ok/device/capture_methods/adb.py",
+      "sha256": "3cc68e303d8903f710c531be4f60e65592e34d09002bb8c34d5094167a361d53"
+    },
+    {
+      "path": "ok/device/capture_methods/base.py",
+      "sha256": "4d0f0e271ace64592cb9a391e3c062c0bba404fd0dac64780534f083b3b30b0d"
+    },
+    {
+      "path": "ok/device/capture_methods/bitblt_utils.py",
+      "sha256": "0004ba86e2a1f959c4d1075356193c4fd822699719386160ece17a1ef6fa3d64"
+    },
+    {
+      "path": "ok/device/capture_methods/bitblt.py",
+      "sha256": "a1dfcfa8a58e2984d4d91b10e5fb45237886698e5cc5e0471e9fc13b1449f605"
+    },
+    {
+      "path": "ok/device/capture_methods/browser.py",
+      "sha256": "e8a14c3fd3ef4f17e8d546c504af42e86a71bb6e9d067d3e710bd0f4bbbf963b"
+    },
+    {
+      "path": "ok/device/capture_methods/desktop_duplication.py",
+      "sha256": "e6b612f3a4eabd86c331ff84cbd93e841a4946ab35b5bfa7f7275b5b1e374a06"
+    },
+    {
+      "path": "ok/device/capture_methods/hwnd_window.py",
+      "sha256": "70cffdfe5a07e3d99e565dda9044036763a2ae443ff4048aabc2b18329ee228e"
+    },
+    {
+      "path": "ok/device/capture_methods/image.py",
+      "sha256": "e1989c9b57ee014029500aa342388788eec0a9d0143c7e6681dfbc0fe10aa87c"
+    },
+    {
+      "path": "ok/device/capture_methods/nemu_ipc.py",
+      "sha256": "efea0d3705c8c1b51520d48a953e8abc7ead118c97ab4c83e0af036787c3e984"
+    },
+    {
+      "path": "ok/device/capture_methods/types.py",
+      "sha256": "c60590ada40e605ca702ed5d75993c62c71c4be27c8e4adab100f086f28c97ac"
+    },
+    {
+      "path": "ok/device/capture_methods/update.py",
+      "sha256": "16744b65134f89ed83373958377cda3ae32beba54294e74c6fbd9e9018505128"
+    },
+    {
+      "path": "ok/device/capture_methods/windows_graphics_hdr.py",
+      "sha256": "a322ff5d868c15c3edf0123a2cd61b13313210a97a3bab07d5832454fa4646bb"
+    },
+    {
+      "path": "ok/device/capture_methods/windows_graphics.py",
+      "sha256": "b4b1e67c72013a15811702957313271f04d4a0bdde31984d832207ebbd386d7b"
+    },
+    {
+      "path": "ok/device/interaction_methods/__init__.py",
+      "sha256": "8ce4ee2e4fea09a3929c8fe728a67403154b9a1e90b5dd6e61321eb45c8347c1"
+    },
+    {
+      "path": "ok/device/interaction_methods/adb.py",
+      "sha256": "4f4a45aa9d0dc4831bdccc18f8ea65974bd080bbe5debff13f9a6a99461062e1"
+    },
+    {
+      "path": "ok/device/interaction_methods/base.py",
+      "sha256": "f152455b78ab9a5d03f9d36705a134b5063a3a89f8d50dab2f7f73d9a2dbab49"
+    },
+    {
+      "path": "ok/device/interaction_methods/browser.py",
+      "sha256": "f57fce27418261d553f7a72142affbc5380f365c8ac7292f43e27c7cea00f1ff"
+    },
+    {
+      "path": "ok/device/interaction_methods/do_nothing.py",
+      "sha256": "7923b37ffb19e5916a3d9a665a51b70ba49280f9cacc4beaffb7045f0eee718d"
+    },
+    {
+      "path": "ok/device/interaction_methods/foreground_post_message.py",
+      "sha256": "6656a2c6ce2e483e130173772c42be1c000a15c19e93f14e22ccfa2fb4007fbb"
+    },
+    {
+      "path": "ok/device/interaction_methods/genshin.py",
+      "sha256": "11541ec99b62e0fdc9aa10571c12e1d57879af9555f4eff7d186af2d010da946"
+    },
+    {
+      "path": "ok/device/interaction_methods/keys.py",
+      "sha256": "035361ae5562ed646176cc539a93016239370a8a343d327edde0da9eb40219b2"
+    },
+    {
+      "path": "ok/device/interaction_methods/post_message.py",
+      "sha256": "642851ae1f484d476a8fa27166dba6d17f5f62a2d1a0bdc609e21f96b89891dc"
+    },
+    {
+      "path": "ok/device/interaction_methods/pydirect.py",
+      "sha256": "c6551cdb1798bb90584e88290841f8776bd284973370dc76f0950f8da57375d2"
+    },
+    {
+      "path": "ok/device/interaction_methods/pynput.py",
+      "sha256": "5565b441cc955617bded36ea46234801bbc3aab27498f89412e4d0b7105b4dae"
+    },
+    {
+      "path": "ok/device/interaction_methods/swipe.py",
+      "sha256": "9008df38bcd86828f897d385acd32e022999774e8cd4ad467b3e04f0ace09b31"
+    },
+    {
+      "path": "ok/feature/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/feature/Box.py",
+      "sha256": "9cdfa02260abf0cf4c009cc4283a54c76dd0828bb152e9bf996034d4f2c94bb4"
+    },
+    {
+      "path": "ok/feature/Feature.py",
+      "sha256": "1237d1424f653f9791bc987abcf933a43e648eec84306d06cf39c3695b7249de"
+    },
+    {
+      "path": "ok/feature/FeatureSet.py",
+      "sha256": "739eea0ee756f7c1ef4af694539ca4d38e687bcaecd52a70a41f1c9625c4f39d"
+    },
+    {
+      "path": "ok/gui/__init__.py",
+      "sha256": "9ae8e92431bf8fcc0f508c44be7db733b1a2ce19918412793ee25440f404fbeb"
+    },
+    {
+      "path": "ok/gui/util/pyappify_startup.py",
+      "sha256": "e2a8f2d7c55233af00c81e9978d495de65a9ede3963580edb08431a6c8786b95"
+    },
+    {
+      "path": "ok/notification/__init__.py",
+      "sha256": "b5499a9452fa158c68f875ba98b3dd0e7c8b791c6de211316dc7b20240fcd5c0"
+    },
+    {
+      "path": "ok/notification/manager.py",
+      "sha256": "7c89dad44603aa90a278f48c0029f452acd2177b41d39bd641f31c1aee4d8a66"
+    },
+    {
+      "path": "ok/notification/messenger_images.py",
+      "sha256": "510afb795938c62360442070748679cc53213b3af8728b15f008af4a0629029e"
+    },
+    {
+      "path": "ok/notification/pipeline.py",
+      "sha256": "c24e6e4f4d0b66b908f12b985030893318f0b900dc24b2cb4ac2e7ae607b76db"
+    },
+    {
+      "path": "ok/notification/ppocr.py",
+      "sha256": "dc99f256ac609b843db6bbb1833285545130fee27a5b1ea44a84402cbc73c628"
+    },
+    {
+      "path": "ok/notification/providers.py",
+      "sha256": "f33d9fee4b4e5b5004fc63b7a6e2603af9db527a1c4af6a05b3a0491f2e6bcbc"
+    },
+    {
+      "path": "ok/notification/system.py",
+      "sha256": "1e60f9fdc7605823a3dd0e67abfd143ca6616766a064b64e394c79df7d4aea06"
+    },
+    {
+      "path": "ok/notification/windows_messenger.py",
+      "sha256": "d8be6e682006450ec482ec2cc3e16bc20f90f692f8ed66c12558315fc72cc981"
+    },
+    {
+      "path": "ok/ocr/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ocr/download_paddle_model.py",
+      "sha256": "ea657fb8f8ccffd7ed494eb554c5673bbd61f4712890abee4af2bef4c4461936"
+    },
+    {
+      "path": "ok/rotypes/__init__.py",
+      "sha256": "02ba626914383375d26d02837825c697107b940a809f822da2a525a4ab4bf60c"
+    },
+    {
+      "path": "ok/rotypes/delegate.py",
+      "sha256": "67b49b07912cd72befcac119020b4ed55706578c48bdd96d5bc2784ba62c83ca"
+    },
+    {
+      "path": "ok/rotypes/export.py",
+      "sha256": "a9e1149d5f87bd266d8f0d7ccfdecf06963805ea41e3fe7247eb811b83ffdf67"
+    },
+    {
+      "path": "ok/rotypes/idldsl.py",
+      "sha256": "55458a8b42fc3daddeed885e0617b937ff1b25ed70bce299b026debb0291d2a6"
+    },
+    {
+      "path": "ok/rotypes/inspectable.py",
+      "sha256": "6e39cc6a7d19c6c431b15771449863a05f2e1932acdbff1c5795ea82908861cc"
+    },
+    {
+      "path": "ok/rotypes/roapi.py",
+      "sha256": "d62b5342a1e58adc6165b938948dbd83ca1f335b4b905fd289b5fb8497041aa9"
+    },
+    {
+      "path": "ok/rotypes/types.py",
+      "sha256": "596aa47adfb23b808d3dd3966641ff0249349915ba2c25d039e51bd7ea34a05c"
+    },
+    {
+      "path": "ok/rotypes/winstring.py",
+      "sha256": "cb89237a195a8d898a729f35aa8ba97c6274b3dbc0733d32fada4036a25419b3"
+    },
+    {
+      "path": "ok/rotypes/Windows/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/rotypes/Windows/Foundation/__init__.py",
+      "sha256": "50ee12393f6b6d42995a9c661967124d001aa6379664716d59eee7b0add470e7"
+    },
+    {
+      "path": "ok/rotypes/Windows/Foundation/Collections.py",
+      "sha256": "f9f8f53d432953b4f28943f13f649e2d62ea7b7cc78dd343cb943e10b186048c"
+    },
+    {
+      "path": "ok/rotypes/Windows/Globalization/__init__.py",
+      "sha256": "b30094d9c856c4ed3a8b3c3893289133dc9cbfe4fe0fe2c9dae8229042b1ba26"
+    },
+    {
+      "path": "ok/rotypes/Windows/Graphics/__init__.py",
+      "sha256": "367b0c293106f4bc9665817c0937a19d78febf4d5d638f51593599614e6beaad"
+    },
+    {
+      "path": "ok/rotypes/Windows/Graphics/Capture/__init__.py",
+      "sha256": "0d3e020d311e42ca7fc7309004101ae522d4023cde1ec2d24ee3951fdcffbb88"
+    },
+    {
+      "path": "ok/rotypes/Windows/Graphics/DirectX/__init__.py",
+      "sha256": "727a34c00992ed4a84d4f64eecf2ebc2d77dde84ece4aac84654ad208fa68ab7"
+    },
+    {
+      "path": "ok/rotypes/Windows/Graphics/DirectX/Direct3D11/__init__.py",
+      "sha256": "4585af02718f92794d013e0fcef8baccb874abce0ae639566e46b91ab3b68e30"
+    },
+    {
+      "path": "ok/rotypes/Windows/Graphics/Imaging/__init__.py",
+      "sha256": "b5a69225196c695b7784cb91f15bb6e7d44994a88d944fb2b50e71fbe7cd8e38"
+    },
+    {
+      "path": "ok/rotypes/Windows/Media/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/rotypes/Windows/Media/Ocr/__init__.py",
+      "sha256": "0f305913d309c8cc65818dd9c7e27ba37a236f1b93581a49df0e9dad12979d00"
+    },
+    {
+      "path": "ok/rotypes/Windows/Security/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/rotypes/Windows/Security/Cryptography/__init__.py",
+      "sha256": "f169657f77942ffd1febc2b8331dd6422ca86f9283737023358da65f92069d48"
+    },
+    {
+      "path": "ok/rotypes/Windows/Storage/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/rotypes/Windows/Storage/Streams/__init__.py",
+      "sha256": "1c002e57ebd57ed6107d0e830e00e94a914f3c28b2fd3deba93bb2628aabdf61"
+    },
+    {
+      "path": "ok/rotypes/Windows/UI/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/rotypes/Windows/UI/ViewManagement/__init__.py",
+      "sha256": "5105117beccb5323da0ea3bb682a6395a22b2b63cb1fda772e21c9705a75aadd"
+    },
+    {
+      "path": "ok/task/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/task/DiagnosisTask.py",
+      "sha256": "30b69dddccb0936e2cc6d3e773bce5b875b33ddee5560ac0580be42a5dc12442"
+    },
+    {
+      "path": "ok/task/exceptions.py",
+      "sha256": "833defc6d5bc5c1479b8e05de6ace35b98605195a0b4490932467886d04ca66a"
+    },
+    {
+      "path": "ok/task/task.py",
+      "sha256": "0e1677611fb93a18ae98caa98ddfbbf62814fc8bd8e82c780c6817eb409ba1b0"
+    },
+    {
+      "path": "ok/task/TaskExecutor.py",
+      "sha256": "85862d681d2faaf40a9df4c419c765a6a8cdcc70b8e76efb53989ead8ab88814"
+    },
+    {
+      "path": "ok/third_party/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/third_party/paperclip.py",
+      "sha256": "33ed251f3143c0ab88ff682eaf3d027babef82efff5690d8e286d7159cdb1a8a"
+    },
+    {
+      "path": "ok/ui/__init__.py",
+      "sha256": "dedb1775d9d96689a0557e5256f3ace58bcbec760242531157c7bfd352a6301d"
+    },
+    {
+      "path": "ok/ui/overlay/__init__.py",
+      "sha256": "9b76b90d8b396071211596edebe9dba957e340dcb896bc2d5a8f00d94adb9a7b"
+    },
+    {
+      "path": "ok/ui/overlay/win32_gdi.py",
+      "sha256": "0ae6d007caa1fc4d004c61bd8cca8b53532e6b1b775b880eacf06b5f57fcc705"
+    },
+    {
+      "path": "ok/ui/qt/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/Communicate.py",
+      "sha256": "812f726a31090573732eba148a10851a1f5ebee2da71d15fa7839eb7cfdbef76"
+    },
+    {
+      "path": "ok/ui/qt/events.py",
+      "sha256": "155383999501ac2a64b1adc5080544cd4f16ef3637d4674c2b0fad1a1104de11"
+    },
+    {
+      "path": "ok/ui/qt/MainWindow.py",
+      "sha256": "5865ca0d2ed17c950d73bb2161d38647feacdbd1b52f3fd4702a48c2014b99e6"
+    },
+    {
+      "path": "ok/ui/qt/MessageWindow.py",
+      "sha256": "891dbed8b18677da4cba0b5d7c126796b266180377792f09efd86aeefbed6504"
+    },
+    {
+      "path": "ok/ui/qt/qt.qrc",
+      "sha256": "a7ee69596689a098dbef4b7aae5ec7eaf65f03085e1577888ee2c564ad7fbb3e"
+    },
+    {
+      "path": "ok/ui/qt/resources.py",
+      "sha256": "cdfb9aa504571cd03d5281da28907d152608c9c094ba251a0982367ed81f21e6"
+    },
+    {
+      "path": "ok/ui/qt/StartController.py",
+      "sha256": "fb512d1a56e6015ea312d15e80c1517a68f87ad01addd994cdbc235e05fcebde"
+    },
+    {
+      "path": "ok/ui/qt/about/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/about/AboutTab.py",
+      "sha256": "17b098d5507ce3b63b46cc5e15615bcc5ef966a9519e86615d3053d87356f34c"
+    },
+    {
+      "path": "ok/ui/qt/about/UpdateCard.py",
+      "sha256": "6b1a42dfd50ef4280de2fb52588e7fc09a11b99c0ce076fc1d4c849485459937"
+    },
+    {
+      "path": "ok/ui/qt/common/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/common/config.py",
+      "sha256": "77e37305c5b40dfa44e1121ffd9e498f4ddb20d81a0965c38fa49f03b4d1355f"
+    },
+    {
+      "path": "ok/ui/qt/debug/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/debug/diagnosis_page.py",
+      "sha256": "2e692a4478674554e2a9a55554659bd9182e3da18c216a2a6700b0215920183e"
+    },
+    {
+      "path": "ok/ui/qt/debug/OverlayWidget.py",
+      "sha256": "e3c235a9467f5c1b1606a94403b314dd3e7c244486eaa422808b97a92cc15fa3"
+    },
+    {
+      "path": "ok/ui/qt/debug/Screenshot.py",
+      "sha256": "430121a7e0cfa236982579c91e07a231ad6c513ab134867c1f0f632b1ca39038"
+    },
+    {
+      "path": "ok/ui/qt/i18n/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/i18n/en_US.qm",
+      "sha256": "2344af1af2ae766e15f983feb16c1c38e982315f39e59f1ab0648def7470db8b"
+    },
+    {
+      "path": "ok/ui/qt/i18n/en_US.ts",
+      "sha256": "45a14a3bed2aa12d9fb9fe240ddb23ee4c8df4ec1fe72aa7c69a25e5aaf2dd74"
+    },
+    {
+      "path": "ok/ui/qt/i18n/es_ES.qm",
+      "sha256": "b50208ba8ed59e63454192f9a912b6282c0b1fe4c26dbd23cb0a3ba4b54e5c96"
+    },
+    {
+      "path": "ok/ui/qt/i18n/es_ES.ts",
+      "sha256": "ea316c440fecd18e0a4053f08ca5e3e70fad2e84bcbb9ec2fefe44aade4b7aa9"
+    },
+    {
+      "path": "ok/ui/qt/i18n/GettextTranslator.py",
+      "sha256": "49bf77e76efbcfce30f61b51bfae6139b1572d2d62445b355a46dba78a08d883"
+    },
+    {
+      "path": "ok/ui/qt/i18n/ja_JP.qm",
+      "sha256": "39f4b5ecdc93e7683c2bc1d1d2e78ec854d3a6851513ccbbd1b7361a53a07f1e"
+    },
+    {
+      "path": "ok/ui/qt/i18n/ja_JP.ts",
+      "sha256": "e026ced409cf01a8041777af112b0fdaa33e3f379a57f1f027efa605a9aaf5ad"
+    },
+    {
+      "path": "ok/ui/qt/i18n/ko_KR.qm",
+      "sha256": "9cc740c82152a48168c121a1dcb761d1a4ce9ccc97bc49acc61f8a55e3b91d7b"
+    },
+    {
+      "path": "ok/ui/qt/i18n/ko_KR.ts",
+      "sha256": "5e695e3d0f3ce2c51931e84b660088375f42cd4f49a4762a3525fd1f69697bd5"
+    },
+    {
+      "path": "ok/ui/qt/i18n/path.py",
+      "sha256": "45869a5a3e06f4296872428742267b5924245910ab03a7a696dfd3ec53d2c7b6"
+    },
+    {
+      "path": "ok/ui/qt/i18n/update.py",
+      "sha256": "97faaf3359c6b9a1d601ff8cf108e1713a3acbcf7ae231f8fe2f32081fd45e8e"
+    },
+    {
+      "path": "ok/ui/qt/i18n/zh_CN.qm",
+      "sha256": "5194fcb6fa6e6b7a835505939058d5b9e2d3bbb264c02d6ab6c73a60ce4a80b0"
+    },
+    {
+      "path": "ok/ui/qt/i18n/zh_CN.ts",
+      "sha256": "470cad7c932810e6aad2f065344dc53af27156591fae35f90092446f6f3e5418"
+    },
+    {
+      "path": "ok/ui/qt/i18n/zh_TW.qm",
+      "sha256": "67010d074c11ac9775fd9043e963069a381c2bf2f547e65cb5e571eeb30b1db0"
+    },
+    {
+      "path": "ok/ui/qt/i18n/zh_TW.ts",
+      "sha256": "4c754c2d78b87f5026e8e992f3dbac41138da6c40441931dc277b1be6826829e"
+    },
+    {
+      "path": "ok/ui/qt/kit/__init__.py",
+      "sha256": "6b8e45b478ed867e02c2afb63394380a66121178898055b66f058d6781e2b8e5"
+    },
+    {
+      "path": "ok/ui/qt/kit/buttons.py",
+      "sha256": "d03f2f24b5536684f3fcf72175bf8033d7c85bc37974a39ffe1dbf0f35ba1f28"
+    },
+    {
+      "path": "ok/ui/qt/kit/cards.py",
+      "sha256": "01a2064699436d240a3389510be7f6397be3321f6d465317939106fac3b5612c"
+    },
+    {
+      "path": "ok/ui/qt/kit/dialogs.py",
+      "sha256": "9d16eaf33066862319fd07731ff9b0ab84d18c9a119aa898f8f1b6ba90273914"
+    },
+    {
+      "path": "ok/ui/qt/kit/feedback.py",
+      "sha256": "3dcfe10e8e61adb2ae41cb9ab9817866e08cb7bac8655382d9174d610d0a683a"
+    },
+    {
+      "path": "ok/ui/qt/kit/gallery.py",
+      "sha256": "76bcdc92b3b5d5359c0ab33f35346901ad447a3cefc9d14e6002f510df73f199"
+    },
+    {
+      "path": "ok/ui/qt/kit/icons.py",
+      "sha256": "a1b3629e5cde52f4b048066b81f70a7554e3cc12696ad6e2952debd68c5a1b49"
+    },
+    {
+      "path": "ok/ui/qt/kit/inputs.py",
+      "sha256": "11b29371be0030fe5027f079525960b959ac2caf64a75cce62f05273f66eaf40"
+    },
+    {
+      "path": "ok/ui/qt/kit/labels.py",
+      "sha256": "cb7664c6114470b6cefe2f0d3e61830e7364aae1d9f20f098ff45ebd6984744f"
+    },
+    {
+      "path": "ok/ui/qt/kit/layout.py",
+      "sha256": "f60076aefd04342c51c53217f2acbccc7c836b3570bffe2e1092fe5e39c4aa2f"
+    },
+    {
+      "path": "ok/ui/qt/kit/navigation.py",
+      "sha256": "26c3a4f2a48e144109630eac368e102e962489234b819b42b75dfc74bbb14d38"
+    },
+    {
+      "path": "ok/ui/qt/kit/options.py",
+      "sha256": "3180a44dfa35565d411b3ecb507b30ef279683e49784691b540bcf25a3299748"
+    },
+    {
+      "path": "ok/ui/qt/kit/popover.py",
+      "sha256": "54fb71ff4d9f148ee9ced7091a4a7363798c1932c8d2071180429a879d4257b3"
+    },
+    {
+      "path": "ok/ui/qt/kit/qss.py",
+      "sha256": "7bee24e033a3a14827ca486b87b099d81733eb045b68e61cd0f9fa2f540cb96c"
+    },
+    {
+      "path": "ok/ui/qt/kit/switch.py",
+      "sha256": "ee909d2620a0ca726d616ce00ecb7ccf49bbe7b36b3fe2f58528597020db1275"
+    },
+    {
+      "path": "ok/ui/qt/kit/tabs.py",
+      "sha256": "0ee70bfcbe28a915ecb33ae57b6a7a283a4d030b234e32a7cd89b2642753b1a8"
+    },
+    {
+      "path": "ok/ui/qt/kit/theme.py",
+      "sha256": "83897d1c634f627308497c8dd5d1c634bd1dde4ee8a3925e0fe7d1360a4dad79"
+    },
+    {
+      "path": "ok/ui/qt/kit/window.py",
+      "sha256": "d9dbf5b7574b9de30e118941235f8bf58373a1fe0331414414a8565eb55e0e72"
+    },
+    {
+      "path": "ok/ui/qt/overlay/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/overlay/OverlayWindow.py",
+      "sha256": "8c8797c0d4ec4299dbbd3ea02623f3c7a9256f8d3eb364f47267210b2bcc5b0a"
+    },
+    {
+      "path": "ok/ui/qt/plugins/__init__.py",
+      "sha256": "46cea5fe72c2221472a15048a21496bbd50742f8fd816dbca2e5e8c5bf50cab5"
+    },
+    {
+      "path": "ok/ui/qt/plugins/imported_tabs.py",
+      "sha256": "e25611f881532323b1713f85a5d427b85d95e91095c714e694994ba28fa5ef62"
+    },
+    {
+      "path": "ok/ui/qt/plugins/PluginTab.py",
+      "sha256": "251d999fe7bebf7312647fbe7b8e46d5bbccee33722c76a63830bcba95e34af5"
+    },
+    {
+      "path": "ok/ui/qt/settings/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/settings/config_section.py",
+      "sha256": "a2536e66b21ad57214aa22e4fbb3f900d263a9fa673bd41b8e2578ea0050a369"
+    },
+    {
+      "path": "ok/ui/qt/settings/GlobalConfigTab.py",
+      "sha256": "f8ce0ccebf01360ca09c77561e20d1833eee9c6133524f15e1d6181e2a793249"
+    },
+    {
+      "path": "ok/ui/qt/settings/settings_page.py",
+      "sha256": "f06ad86449055cd9ede58187f876d9a66d33cfbf3b40230c6e598c6de8dc2c08"
+    },
+    {
+      "path": "ok/ui/qt/shell/__init__.py",
+      "sha256": "51371ec1614eea1f77f2f4591aeca936811d4f1a3922e9278ff46900ebde8aa5"
+    },
+    {
+      "path": "ok/ui/qt/shell/connection.py",
+      "sha256": "47deae2fe5809cf96c5a134709176821ee30db98640dababa8a93144496d7708"
+    },
+    {
+      "path": "ok/ui/qt/shell/diagnostics.py",
+      "sha256": "a663472a0e7a2e496f35fc91c38cc630e4bcd56ea786a10870bd5ccbd43f002d"
+    },
+    {
+      "path": "ok/ui/qt/shell/lazy_page.py",
+      "sha256": "029e7fb210cab2546a7fa97492d2c7c91b5d28ff5b42de5ec9fb264865f5e051"
+    },
+    {
+      "path": "ok/ui/qt/shell/log_page.py",
+      "sha256": "f1d936ce8a5f1d685ed16b299b8bd4a09e2d33bca5b7f1adcc82062b4f9dd29c"
+    },
+    {
+      "path": "ok/ui/qt/shell/nav_icons.py",
+      "sha256": "7ab05f28dfdbe1e820a8b806da4f6772a26b0fe91fe238af38441409f3e1e5f7"
+    },
+    {
+      "path": "ok/ui/qt/shell/run_bar.py",
+      "sha256": "ef6bc80c66332c12d617a350000084de0078a4d042b92425e9fa2287a5629c3d"
+    },
+    {
+      "path": "ok/ui/qt/start/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/tasks/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/tasks/config_editors.py",
+      "sha256": "b99f71dc53e50f3d826dbdf75a64ced3216b719f6ccaf8758fe5f1e3ff62bfd6"
+    },
+    {
+      "path": "ok/ui/qt/tasks/config_form.py",
+      "sha256": "c604a2934f7b184c45fc1ca8dd35c0d3331a500d6beb5ce752fcefe23654940d"
+    },
+    {
+      "path": "ok/ui/qt/tasks/EditTaskTab.py",
+      "sha256": "7bcac7680fc63b90221d822a14105f6e67149f6f35eb4b9ef9945b4baa15931c"
+    },
+    {
+      "path": "ok/ui/qt/tasks/MarkUpWindow.py",
+      "sha256": "ee93cfcbe952831877543118cb3cfb39455d179463a3e18ad238fa01832645cb"
+    },
+    {
+      "path": "ok/ui/qt/tasks/ModifyListDialog.py",
+      "sha256": "cd22c39dc98e67595ae2dffec52afae5b8338bc436687ad686e928bf308cf6f6"
+    },
+    {
+      "path": "ok/ui/qt/tasks/mouse_buttons.py",
+      "sha256": "4eb5c44a6548a230562fe79bec796adec5c3526cc36f60430033f8d42a0f5f78"
+    },
+    {
+      "path": "ok/ui/qt/tasks/PythonHighlighter.py",
+      "sha256": "351e74cbbb4583f3b896437090917174ef11d0a8f4f696cea67a89d6d0964f8e"
+    },
+    {
+      "path": "ok/ui/qt/tasks/RecordScript.py",
+      "sha256": "3f8058020258b38e1d54304779508dd7e1479ca0488a1dd7ab6cf7d85ba74bdc"
+    },
+    {
+      "path": "ok/ui/qt/tasks/schedule_index_sync.py",
+      "sha256": "50775ab2955efe3ef7bb6e2f4dd3f38cbad54b882722176059c6387e70e66651"
+    },
+    {
+      "path": "ok/ui/qt/tasks/ScheduleTaskTab.py",
+      "sha256": "0ecfc8fdd1dc74c3f1772f2f817f24aeb3f0472b6898d7e8667095b814e22623"
+    },
+    {
+      "path": "ok/ui/qt/tasks/ScriptPackager.py",
+      "sha256": "6086ac2e6aad7497b4c59b29501747a637ab9845554229bfc5b6344e911b04d0"
+    },
+    {
+      "path": "ok/ui/qt/tasks/TaskManger.py",
+      "sha256": "3385533393e60d00a2ba4ed7a1cdadfbfd3b07a9d74e1c95df2197523a9facf3"
+    },
+    {
+      "path": "ok/ui/qt/tasks/TaskOpButton.py",
+      "sha256": "d4e687373c205099b81e394166062bd3b9d44720a48e1c475824593df227ca18"
+    },
+    {
+      "path": "ok/ui/qt/tasks/tasks_page.py",
+      "sha256": "e41d0cd17d1f2cea9ca369dc3304b252a91e0395208be238ef93f0af168fd6c6"
+    },
+    {
+      "path": "ok/ui/qt/tasks/TemplateFactory.py",
+      "sha256": "8c60185f9ab6be61819d266b6d2a34fa234be3234e9d9b5784323561d4f120da"
+    },
+    {
+      "path": "ok/ui/qt/tasks/TemplateTab.py",
+      "sha256": "d4b5a53d2d382fb5c7695c41869c931aeb298d13127c0bbbcb9b61ae5bdad6ef"
+    },
+    {
+      "path": "ok/ui/qt/util/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/util/Alert.py",
+      "sha256": "504e8b9d902ac555de41e7a44f3b8ba70cf445cec757ea58208f5d02bf7e8afe"
+    },
+    {
+      "path": "ok/ui/qt/util/app.py",
+      "sha256": "b2ab96956733f6392152f01bb82d93d47d66442a02bc723ee5b08628e508a836"
+    },
+    {
+      "path": "ok/ui/qt/util/download.py",
+      "sha256": "e2d4fe28db7c0b54e650d95c53a5ff95abda7b850963c2cef9e7a52180f042a8"
+    },
+    {
+      "path": "ok/ui/qt/util/InitWorker.py",
+      "sha256": "cf146c4d88240e2f31aa3301678f61fa31a188e5860555f0643755d64a6ee3ed"
+    },
+    {
+      "path": "ok/ui/qt/util/pip_util.py",
+      "sha256": "2a3837b542a38718153e60bba4447e43db595760e8b55634181e3c3f42b0734d"
+    },
+    {
+      "path": "ok/ui/qt/util/pyappify_startup.py",
+      "sha256": "4249d3c18d13211a974cad4c75b04bc4725f4811f3192fb57b90c2c1cabf4a2c"
+    },
+    {
+      "path": "ok/ui/qt/util/touch_scroll.py",
+      "sha256": "387b5834c7da2b9fec513b1b5a230ad0d5ec662deb1258369c19fc04b9a54be2"
+    },
+    {
+      "path": "ok/ui/qt/util/windows_thumbnail.py",
+      "sha256": "ec0182742ace1ab3f578bdea9aaf3d9b31b3f99555697d79a49368e6115ebfd3"
+    },
+    {
+      "path": "ok/ui/qt/widget/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/ui/qt/widget/Card.py",
+      "sha256": "df4715c3206ee51666253c0b5993bca05fb2705f3711220161cfb9583d26f22e"
+    },
+    {
+      "path": "ok/ui/qt/widget/CustomTab.py",
+      "sha256": "d94c6dfd219b38dff5893dfd656c6bde77de0f812dc03464c93e260b1d32c44a"
+    },
+    {
+      "path": "ok/ui/qt/widget/FlowLayout.py",
+      "sha256": "45d2f38a8325ed774bd9ae1c82eb0528f3345325aff07e13263aa1235e85d3f5"
+    },
+    {
+      "path": "ok/ui/qt/widget/ImageWidget.py",
+      "sha256": "9189028f3a91fa5922756517646f7871b5480c6b4154baf3084bc9e4c0c5d6e3"
+    },
+    {
+      "path": "ok/ui/qt/widget/ImportWarningDialog.py",
+      "sha256": "4e634c887a2035dbe7675c5f3eeb625aee9901f90e4750c3f15d722e6f8bebaa"
+    },
+    {
+      "path": "ok/ui/qt/widget/ListTableWidgetItem.py",
+      "sha256": "9221dd9017c65506012ebc9d18d462969c04cc0e450727870769bd3cbf24e973"
+    },
+    {
+      "path": "ok/ui/qt/widget/NumericTableWidgetItem.py",
+      "sha256": "0f4b9869e89d8ab25cb63b6a175e758fe8c42571299b09bc4823b0ec3c82c006"
+    },
+    {
+      "path": "ok/ui/qt/widget/SortingTableWidgetItem.py",
+      "sha256": "438aba50dbd1c7de2cfc00bae6f29615481628310e7d8e90ebab1dc52e111bf3"
+    },
+    {
+      "path": "ok/ui/qt/widget/StartLoadingDialog.py",
+      "sha256": "14bfa7aa306965f19eae0276aeccb9e17f570ec9fe0c036c1394f00abeb5707e"
+    },
+    {
+      "path": "ok/ui/qt/widget/Tab.py",
+      "sha256": "0d08e861af50f677d2407cdfda114c9788a8bb358bc673d4428996f0c35b6788"
+    },
+    {
+      "path": "ok/ui/qt/widget/TabWidget.py",
+      "sha256": "9450efc987afab475c45f239c01095dae19d4951a4ed5d99ec8efe2659bf799c"
+    },
+    {
+      "path": "ok/ui/qt/widget/UpdateConfigWidgetItem.py",
+      "sha256": "8b0a7db36605106dd628dd6970f16f77afec5ec63b4a8ba5a628c94678f06805"
+    },
+    {
+      "path": "ok/ui/qt/widget/YesNonWidgetItem.py",
+      "sha256": "f7e5d9a262904afac280c6e5cfc9ba7d5909083844c28ff05589c5a5eac88653"
+    },
+    {
+      "path": "ok/update/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ok/update/copy_ok_folder.py",
+      "sha256": "e55ce7595d7b3d628c689b6fe17c02de06ff9abc76597c27b4e935573a1ee31c"
+    },
+    {
+      "path": "ok/update/inline_ok_requirements.py",
+      "sha256": "e649519c9b82596f124f4d787f092c27cdf6c47b1967b34b655801d3affb41b9"
+    },
+    {
+      "path": "ok/util/__init__.py",
+      "sha256": "591e6e255f34ea61d5e9e630d023f1643a00d523e2963298a0acd8a100efd54e"
+    },
+    {
+      "path": "ok/util/Analytics.py",
+      "sha256": "abe607f4aa98a26531370ade5e64f4bedc22f05b24a97a990ac82cd421417bba"
+    },
+    {
+      "path": "ok/util/blur.py",
+      "sha256": "93680f3c2686ca307587238decda38fd34325d640b19e29f9e1c9e7c0f926155"
+    },
+    {
+      "path": "ok/util/clazz.py",
+      "sha256": "95706be048d6770d933a03b0e788ce295e641dbf5f91861ce079af6838d003e1"
+    },
+    {
+      "path": "ok/util/collection.py",
+      "sha256": "bb44d4137594302d01b67ab76cfcc14188974955a330575a5436775dd2bdbeee"
+    },
+    {
+      "path": "ok/util/color.py",
+      "sha256": "740a8a7e3fd5405f0617696730a016c238a81ccb129002f6fc7c11e3eb998e3d"
+    },
+    {
+      "path": "ok/util/config.py",
+      "sha256": "becad76c7196de926c669cfbd365e0e0a62302d760f43f8f11deb98ab9e44483"
+    },
+    {
+      "path": "ok/util/explorer.py",
+      "sha256": "e51002cd3295ec2437d04a9233eddf0c61b80355f839a8ec51dc15fe9366a8b1"
+    },
+    {
+      "path": "ok/util/file.py",
+      "sha256": "8d4d3a9fe6b62fb3f17107c29ec0b816c61a69eff15803bf6297e26f8996b715"
+    },
+    {
+      "path": "ok/util/GlobalConfig.py",
+      "sha256": "046eeb1b8710f843b7f514d86db5306759f3be5ca86954bef60a4aa4da094cc2"
+    },
+    {
+      "path": "ok/util/gpu_driver_settings.py",
+      "sha256": "52d2bf0237f8d0d626a19da847cc498e7ec6c7f0d840d90ff59e2fe6e55ab1c2"
+    },
+    {
+      "path": "ok/util/handler.py",
+      "sha256": "7be8449f2f5e6ae78e9042768a5d2679795e67f05687d08f1b5ad917cf2d60df"
+    },
+    {
+      "path": "ok/util/i18n.py",
+      "sha256": "2e9fef0441202beafcff222cde2e05d886bfb735f5d4d59d730e3e61ff9b8ff5"
+    },
+    {
+      "path": "ok/util/logger.py",
+      "sha256": "22ca9f378c01b85b742dc3aa26aac6d8913b0d4d97642915a40f2764a6dc2176"
+    },
+    {
+      "path": "ok/util/partial_sync_repo.py",
+      "sha256": "e44961bc157e8c6f604e98a90ff4d11761414926ef5fd6591b8b294f3b057e2b"
+    },
+    {
+      "path": "ok/util/print_hwnd.py",
+      "sha256": "d9625856a851c9b673ef09537ac4d50d1440e0f20e97fa515997b5b45e0c7c6a"
+    },
+    {
+      "path": "ok/util/process.py",
+      "sha256": "a1426e97dab605d5074d7a78d09b03f84b551c4d39ebd96c5ad9b53269dea47b"
+    },
+    {
+      "path": "ok/util/version.py",
+      "sha256": "64d31afc9b940359d21ce69dbe50e5fcb5c17c71decd062378f2cf68e4fee543"
+    },
+    {
+      "path": "ok/util/window.py",
+      "sha256": "8ba8b5e85e461a7f24794ae3140b1be254e2c85d523e115e97d06d2253fc9e8c"
+    },
+    {
+      "path": "ok/util/windows_schedule.py",
+      "sha256": "e4532606aec5a7675fda1c4d806d4dab43fcdd345df74d9538cdbbcfd3f92912"
+    }
+  ]
+}

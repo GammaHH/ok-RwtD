@@ -2,6 +2,7 @@ import ctypes
 import threading
 import time
 
+import cv2
 import numpy as np
 import win32gui
 
@@ -10,7 +11,13 @@ from ok.util.window import WINDOWS_BUILD_NUMBER, WGC_NO_BORDER_MIN_BUILD
 
 from ok.device.capture_methods import bitblt
 from ok.device.capture_methods.base import BaseWindowsCaptureMethod
-from ok.device.capture_methods.bitblt_utils import PBYTE, composite_hwnds, get_crop_point
+from ok.device.capture_methods.bitblt_utils import (
+    PBYTE,
+    clean_up_bitblt,
+    composite_hwnds,
+    get_crop_point,
+)
+from ok.task.exceptions import CaptureBusyException
 
 logger = Logger.get_logger(__name__)
 
@@ -19,14 +26,29 @@ WGC_FRAME_WAIT_TIMEOUT = 4.0
 
 class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
     name = "Windows Graphics Capture"
-    description = "fast, most compatible, capped at 60fps"
+    description = "Fast, support HDR (not AutoHDR)"
+
+    @property
+    def pixel_format(self):
+        from ok.rotypes.Windows.Graphics.DirectX import DirectXPixelFormat
+        return DirectXPixelFormat.B8G8R8A8UIntNormalized
+
+    def read_mapped_frame(self, mapinfo):
+        mapped = np.ctypeslib.as_array(ctypes.cast(mapinfo.pData, PBYTE),
+                                       (self.last_size.Height, mapinfo.RowPitch // 4, 4))[:, :self.last_size.Width]
+        # One pass copies out of the mapped buffer and drops alpha, giving a
+        # contiguous BGR frame instead of a strided view of a BGRA copy.
+        return cv2.cvtColor(mapped, cv2.COLOR_BGRA2BGR)
 
     def __init__(self, hwnd_window):
         super().__init__(hwnd_window)
         self.lock = threading.RLock()
-        self.get_frame_lock = threading.Lock()
+        # close() may be requested by start_or_stop() while _do_get_frame()
+        # already owns this lock (for example after a target-window change).
+        self.get_frame_lock = threading.RLock()
         self.frame_event = threading.Event()
         self.frame_requested = threading.Event()
+        self._frame_cancel_generation = 0
         self.last_frame_time = time.time()
         self.exit_event = hwnd_window.app_exit_event
         self.cputex = None
@@ -105,10 +127,7 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
             immediate_dc.CopyResource(self.cputex, tex)
             mapinfo = immediate_dc.Map(self.cputex, 0, self.d3d11.D3D11_MAP_READ, 0)
             mapped = True
-            img = np.ctypeslib.as_array(ctypes.cast(mapinfo.pData, PBYTE),
-                                        (self.last_size.Height, mapinfo.RowPitch // 4, 4))[
-                :, :self.last_size.Width].copy()
-            return img
+            return self.read_mapped_frame(mapinfo)
         except OSError as e:
             if e.winerror == self.d3d11.DXGI_ERROR_DEVICE_REMOVED or e.winerror == self.d3d11.DXGI_ERROR_DEVICE_RESET:
                 need_reset_framepool = True
@@ -134,7 +153,12 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
     @hwnd_window.setter
     def hwnd_window(self, hwnd_window):
         self._hwnd_window = hwnd_window
-        self.start_or_stop()
+        try:
+            self.start_or_stop()
+        except CaptureBusyException:
+            # Another request owns get_frame_lock and will validate the latest
+            # capture_target_signature before obtaining its next frame.
+            logger.debug('WGC target refresh deferred because capture is busy')
 
     def connected(self):
         return self.hwnd_window is not None and self.hwnd_window.exists and self.frame_pool is not None
@@ -149,6 +173,21 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
         return 0
 
     def start_or_stop(self, capture_cursor=False):
+        """Start, stop, or refresh WGC without violating the lock order.
+
+        Lifecycle operations and frame requests both acquire get_frame_lock
+        before self.lock. A contended lock means another valid WGC operation
+        is in progress; it is retryable and must not be reported as a capture
+        failure.
+        """
+        if not self.get_frame_lock.acquire(blocking=False):
+            raise CaptureBusyException('Windows Graphics Capture is busy')
+        try:
+            return self._start_or_stop(capture_cursor)
+        finally:
+            self.get_frame_lock.release()
+
+    def _start_or_stop(self, capture_cursor=False):
         with self.lock:
             if self.exit_event.is_set():
                 logger.warning('start_or_stop exit_event.is_set() return')
@@ -184,7 +223,6 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
                     from ok.rotypes.Windows.Graphics.Capture import Direct3D11CaptureFramePool, \
                         IGraphicsCaptureItemInterop, \
                         IGraphicsCaptureItem, GraphicsCaptureItem
-                    from ok.rotypes.Windows.Graphics.DirectX import DirectXPixelFormat
                     from ok.rotypes.Windows.Graphics.DirectX.Direct3D11 import IDirect3DDevice, \
                         IDirect3DDxgiInterfaceAccess
                     from ok.rotypes.roapi import GetActivationFactory
@@ -207,7 +245,7 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
                     self.evtoken = item.add_Closed(delegate)
 
                     self.frame_pool = Direct3D11CaptureFramePool.CreateFreeThreaded(self.rtdevice,
-                                                                                    DirectXPixelFormat.B8G8R8A8UIntNormalized,
+                                                                                    self.pixel_format,
                                                                                     1, item.Size)
                     self.session = self.frame_pool.CreateCaptureSession(item)
                     pool = self.frame_pool
@@ -247,59 +285,122 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
         self.evtoken = None
 
     def close(self):
+        # _do_get_frame() composites child windows with BitBlt after receiving
+        # the WGC frame. Serialize close with that whole request so its GDI
+        # contexts cannot be released while composite_hwnds() is using them.
+        # Wake a pending request before waiting for get_frame_lock; otherwise
+        # the GUI close path can wait for the full frame timeout.
         with self.lock:
-            logger.info('destroy windows capture')
+            self._frame_cancel_generation += 1
             self.frame_requested.clear()
             self.frame_event.set()
-            if self.frame_pool is not None:
-                self.frame_pool.Close()
-                self.frame_pool = None
-            if self.session is not None:
-                self.session.Close()
-                self.session = None
-            self.item = None
-            if self.rtdevice:
-                self.rtdevice.Release()
-                self.rtdevice = None
-            if self.dxdevice:
-                self.dxdevice.Release()
-                self.dxdevice = None
-            if self.immediatedc:
-                self.immediatedc.Release()
-                self.immediatedc = None
-            if self.cputex:
-                self.cputex.Release()
-                self.cputex = None
-            self.capture_hwnd = 0
-            self.capture_target_signature = None
+        with self.get_frame_lock:
+            with self.lock:
+                logger.info('destroy windows capture')
+                self.frame_requested.clear()
+                self.frame_event.set()
+                if self.frame_pool is not None:
+                    self.frame_pool.Close()
+                    self.frame_pool = None
+                if self.session is not None:
+                    self.session.Close()
+                    self.session = None
+                self.item = None
+                if self.rtdevice:
+                    self.rtdevice.Release()
+                    self.rtdevice = None
+                if self.dxdevice:
+                    self.dxdevice.Release()
+                    self.dxdevice = None
+                if self.immediatedc:
+                    self.immediatedc.Release()
+                    self.immediatedc = None
+                if self.cputex:
+                    self.cputex.Release()
+                    self.cputex = None
+                for context in self.contexts.values():
+                    clean_up_bitblt(context)
+                self.contexts.clear()
+                self.capture_hwnd = 0
+                self.capture_target_signature = None
 
     def do_get_frame(self):
-        # frame_requested and last_frame represent one in-flight request. Keep
-        # concurrent task/UI callers from consuming each other's response.
-        with self.get_frame_lock:
+        """Capture one frame, or report a retryable busy state.
+
+        frame_requested, frame_event, and last_frame represent one in-flight
+        request. Only one caller may operate on them at a time.
+        """
+        return self.do_get_frame_wait(0)
+
+    def do_get_frame_wait(self, timeout):
+        """Like do_get_frame(), but wait up to timeout for the request lock.
+
+        The task executor requests frames almost continuously, so a one-off
+        caller on another thread would otherwise nearly always see BUSY. The
+        timeout only bounds the lock wait; the frame wait is unchanged.
+        """
+        if timeout > 0:
+            acquired = self.get_frame_lock.acquire(timeout=timeout)
+        else:
+            acquired = self.get_frame_lock.acquire(blocking=False)
+        if not acquired:
+            raise CaptureBusyException('Windows Graphics Capture is busy')
+        try:
             return self._do_get_frame()
+        finally:
+            self.get_frame_lock.release()
 
-    def _do_get_frame(self):
+    def get_frame_for_probe(self, timeout):
+        """Try to produce a frame within the caller's absolute time budget.
 
+        Unlike BaseCaptureMethod.get_frame(), this deliberately propagates
+        CaptureBusyException so capture-method selection can distinguish BUSY
+        from a WGC instance that actually failed to produce a frame.
+        """
+        timeout = max(0.0, float(timeout))
+        deadline = time.monotonic() + timeout
+
+        if not self.get_frame_lock.acquire(timeout=timeout):
+            raise CaptureBusyException('Windows Graphics Capture is busy')
+
+        try:
+            return self._do_get_frame(frame_deadline=deadline)
+        finally:
+            self.get_frame_lock.release()
+
+    def _do_get_frame(self, frame_deadline=None):
+        if self.exit_event.is_set():
+            return None
         if self.start_or_stop():
             now = time.time()
             if now - self.last_frame_time > 10:
                 logger.warning('no frame for 10 sec, try to restart')
                 self.close()
                 self.last_frame_time = time.time()
-                return self._do_get_frame()
+                return self._do_get_frame(frame_deadline=frame_deadline)
 
             # A frame left by a request that timed out is not necessarily the
             # latest frame anymore. Every call starts a fresh request instead of
             # consuming such a frame.
             with self.lock:
                 frame = None
+                cancel_generation = self._frame_cancel_generation
                 self.last_frame = None
                 self.frame_event.clear()
                 self.frame_requested.set()
 
-            deadline = time.monotonic() + WGC_FRAME_WAIT_TIMEOUT
+            deadline = frame_deadline
+            if deadline is None:
+                deadline = time.monotonic() + WGC_FRAME_WAIT_TIMEOUT
             while frame is None:
+                if self.exit_event.is_set():
+                    with self.lock:
+                        self.last_frame = None
+                        self.frame_requested.clear()
+                        self.frame_event.clear()
+                    return None
+                if cancel_generation != self._frame_cancel_generation:
+                    return None
                 timeout_duration = deadline - time.monotonic()
                 if timeout_duration <= 0:
                     # Serialize cancellation with frame_arrived_callback(). If
@@ -314,7 +415,9 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
                             self.frame_requested.clear()
                     break
 
-                self.frame_event.wait(timeout_duration)
+                # ExitEvent cannot directly wake threading.Event, so sample it
+                # at a short interval rather than blocking shutdown for 4 s.
+                self.frame_event.wait(min(timeout_duration, .05))
 
                 with self.lock:
                     if self.frame_pool is None:
@@ -347,14 +450,13 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
 
     def reset_framepool(self, size, reset_device=False):
         logger.info(f'reset_framepool')
-        from ok.rotypes.Windows.Graphics.DirectX import DirectXPixelFormat
         if self.cputex:
             self.cputex.Release()
             self.cputex = None
         if reset_device:
             self.create_device()
         self.frame_pool.Recreate(self.rtdevice,
-                                 DirectXPixelFormat.B8G8R8A8UIntNormalized, 2, size)
+                                 self.pixel_format, 2, size)
 
     def crop_image(self, frame):
         if frame is not None:
