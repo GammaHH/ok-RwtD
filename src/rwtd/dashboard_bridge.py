@@ -71,6 +71,14 @@ class DashboardBridge:
                 path = urlsplit(self.path).path
                 if not self.checked(authenticated=path.startswith("/api/")):
                     return
+                if path == '/favicon.ico':
+                    from pathlib import Path
+                    icon = Path(__file__).resolve().parents[2] / 'icons' / 'icon.ico'
+                    if icon.is_file():
+                        self.send(200, icon.read_bytes(), 'image/vnd.microsoft.icon')
+                    else:
+                        self.send(404, b'{"error":"Icon unavailable"}')
+                    return
                 if path == '/rwtd-theme.css':
                     from .theme import browser_stylesheet
                     self.send(200, browser_stylesheet().encode('utf-8'), 'text/css; charset=utf-8')
