@@ -364,6 +364,7 @@ class FarmRuntime:
 
     def _enter(self, start_node=None):
         self.chain_reading = None
+        self.chain_condition_attempts = 0
         handoff = self.runtime is not None
         item = self.schedule.by_id[self.schedule.current]
         runtime = CanvasRuntime()
@@ -496,6 +497,7 @@ class FarmRuntime:
         self.handoff_pending = True
 
     def _failed_attempt(self, reason, force_exit=False):
+        self.chain_condition_attempts = 0
         if self.schedule.fail(reason, force_exit=force_exit):
             # Capture before _leave stops the runtime and clears its trace.
             node_id = self.runtime.current_node or self.runtime.cursor
@@ -721,8 +723,21 @@ class FarmRuntime:
                 return
             allowed = condition(rule, values or {})
             if allowed is None:
-                self._failed_attempt('Chain 繼續條件 UNKNOWN')
+                # Recognition attempts and failed Chain executions have separate
+                # budgets. Do not charge a Chain failure for a single empty OCR.
+                self.chain_condition_attempts += 1
+                maximum = self.runtime.graph['settings'].get('max_cycles', 10)
+                if isinstance(self.chain_reading, dict):
+                    self.chain_reading.update(attempt_count=self.chain_condition_attempts,
+                                              attempt_limit=maximum)
+                if maximum is None or self.chain_condition_attempts < maximum:
+                    self.next_due = self.clock() + self.runtime.graph['settings'].get('round_wait_seconds', 1)
+                    self.reason = ('Chain 繼續條件 UNKNOWN；等待辨識重試 · '
+                                   f'{self.chain_condition_attempts}/{maximum or "不限"}')
+                    return
+                self._failed_attempt('Chain 繼續條件 UNKNOWN；辨識重試耗盡')
                 return
+            self.chain_condition_attempts = 0
             if not allowed:
                 self._leave()
                 return
